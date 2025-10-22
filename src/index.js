@@ -12,8 +12,8 @@ window.Webflow.push(() => {
   // Modulo positif (wrap) pour boucler proprement
   const wrap = (u, period) => ((u % period) + period) % period;
 
-  // Lerp simple (si tu veux lisser des valeurs)
-  const lerp = (a, b, t) => a + (b - a) * t;
+  // Lerp simple (si tu veux lisser des valeurs) - disponible pour usage futur
+  // const lerp = (a, b, t) => a + (b - a) * t;
 
   /* =========================================
    2) Configuration "tunable" de l'effet
@@ -64,7 +64,7 @@ window.Webflow.push(() => {
 
     // Variable pour tracker si on est en train de drag (vs simple clic)
     let isDragging = false;
-    let dragStartTime = 0;
+    // let dragStartTime = 0; // Commenté car non utilisé actuellement
 
     const drag = initDraggable(app.canvas, tracker, {
       onDelta(dx, dy) {
@@ -88,7 +88,7 @@ window.Webflow.push(() => {
       },
       onPress() {
         // Mémoriser le temps du press
-        dragStartTime = Date.now();
+        // dragStartTime = Date.now(); // Commenté car non utilisé actuellement
         isDragging = false;
         // Ne pas activer le filtre immédiatement, attendre onDelta
       },
@@ -563,20 +563,22 @@ window.Webflow.push(() => {
     })[0];
 
     // Utilitaire pratique
-    Object.defineProperty(d, 'isDragging', { get: () => d.isPressed || d.isThrowing });
+    Object.defineProperty(d, 'isDragging', {
+      get: () => d.isPressed || d.isThrowing,
+    });
     return d;
   }
 
   /* =========================================
    9) Petits helpers numériques
   ========================================= */
-  function safeParseJSON(str) {
-    try {
-      return JSON.parse(str);
-    } catch {
-      return null;
-    }
-  }
+  // function safeParseJSON(str) { // Commenté car non utilisé actuellement
+  //   try {
+  //     return JSON.parse(str);
+  //   } catch {
+  //     return null;
+  //   }
+  // }
   function clamp(v, a, b) {
     return Math.max(a, Math.min(b, v));
   }
