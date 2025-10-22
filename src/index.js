@@ -1,8 +1,8 @@
 /* =========================================
    0) Imports & Plugin setup
 ========================================= */
-import { Application, Assets, Container, Sprite, Texture } from 'pixi.js';
-import { BulgePinchFilter } from 'pixi-filters';
+import { Application, Assets, Container, Sprite, Texture } from "pixi.js";
+import { BulgePinchFilter } from "pixi-filters";
 
 window.Webflow ||= [];
 window.Webflow.push(() => {
@@ -12,8 +12,8 @@ window.Webflow.push(() => {
   // Modulo positif (wrap) pour boucler proprement
   const wrap = (u, period) => ((u % period) + period) % period;
 
-  // Lerp simple (si tu veux lisser des valeurs)
-  const lerp = (a, b, t) => a + (b - a) * t;
+  // Lerp simple (si tu veux lisser des valeurs) - disponible pour usage futur
+  // const lerp = (a, b, t) => a + (b - a) * t;
 
   /* =========================================
    2) Configuration "tunable" de l'effet
@@ -25,7 +25,8 @@ window.Webflow.push(() => {
     NEAR_BORDER: 60, // seuil en px pour gestion des clones (optionnel)
     PARALLAX_MIN: 0.4, // facteur de parallax mini (arrière-plan) - plus bas = plus d'effet
     PARALLAX_MAX: 1.5, // facteur maxi (avant-plan) - plus haut = plus d'effet
-    REDUCED_MOTION: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    REDUCED_MOTION: window.matchMedia("(prefers-reduced-motion: reduce)")
+      .matches,
   };
 
   /* =========================================
@@ -33,10 +34,10 @@ window.Webflow.push(() => {
   ========================================= */
   (async function main() {
     // Récupère le conteneur & les données CMS (via data-attributes)
-    const root = document.querySelector('.infinite_page_wrap');
-    if (!root) return console.warn('Pas de #archive-root sur la page.');
+    const root = document.querySelector(".infinite_page_wrap");
+    if (!root) return console.warn("Pas de #archive-root sur la page.");
 
-    const itemsData = gsap.utils.toArray('.infinite_page_image');
+    const itemsData = gsap.utils.toArray(".infinite_page_image");
     // itemsData attendu: [{src, w?, h?, factor?}, ...]
 
     // 3.1 Créer l'app Pixi (canvas) et la "scène monde"
@@ -64,7 +65,7 @@ window.Webflow.push(() => {
 
     // Variable pour tracker si on est en train de drag (vs simple clic)
     let isDragging = false;
-    let dragStartTime = 0;
+    // let dragStartTime = 0; // Commenté car non utilisé actuellement
 
     const drag = initDraggable(app.canvas, tracker, {
       onDelta(dx, dy) {
@@ -82,13 +83,13 @@ window.Webflow.push(() => {
           gsap.to(bulgePinchFilter, {
             strength: 0.25,
             duration: 0.4,
-            ease: 'cubic.out',
+            ease: "cubic.out",
           });
         }
       },
       onPress() {
         // Mémoriser le temps du press
-        dragStartTime = Date.now();
+        // dragStartTime = Date.now(); // Commenté car non utilisé actuellement
         isDragging = false;
         // Ne pas activer le filtre immédiatement, attendre onDelta
       },
@@ -98,7 +99,7 @@ window.Webflow.push(() => {
           gsap.to(bulgePinchFilter, {
             strength: 0,
             duration: 0.4,
-            ease: 'cubic.out',
+            ease: "cubic.out",
           });
         }
         isDragging = false;
@@ -124,7 +125,7 @@ window.Webflow.push(() => {
     });
 
     // 3.7 Responsive: recalculer tailles et reposer les items
-    window.addEventListener('resize', () => {
+    window.addEventListener("resize", () => {
       const newSize = { w: window.innerWidth, h: window.innerHeight };
       app.renderer.resize(newSize.w, newSize.h);
       const t = computeTile(newSize, CONFIG.TILE_SCALE);
@@ -208,8 +209,8 @@ window.Webflow.push(() => {
     overlay.height = viewportH;
     overlay.tint = 0xffffff;
     overlay.alpha = 0;
-    overlay.eventMode = 'static';
-    overlay.cursor = 'default';
+    overlay.eventMode = "static";
+    overlay.cursor = "default";
     modalLayer.addChild(overlay);
 
     // Créer le sprite de l'image en grand
@@ -252,21 +253,21 @@ window.Webflow.push(() => {
     }
 
     // Animer l'apparition du fond
-    gsap.to(overlay, { alpha: 0.75, duration: 0.4, ease: 'power2.out' });
+    gsap.to(overlay, { alpha: 0.75, duration: 0.4, ease: "power2.out" });
 
     // Animer le sprite vers sa position finale (effet FLIP)
     gsap.to(modalSprite, {
       x: targetX,
       y: targetY,
       duration: 0.6,
-      ease: 'power3.out',
+      ease: "power3.out",
     });
 
     gsap.to(modalSprite.scale, {
       x: targetScale,
       y: targetScale,
       duration: 0.6,
-      ease: 'power3.out',
+      ease: "power3.out",
     });
 
     // Animer l'opacité seulement si on part du fallback
@@ -274,19 +275,19 @@ window.Webflow.push(() => {
       gsap.to(modalSprite, {
         alpha: 1,
         duration: 0.4,
-        ease: 'power2.out',
+        ease: "power2.out",
       });
     }
 
     // Fermer la modal au clic sur le fond
-    overlay.on('pointerdown', () => closeModal());
-    modalSprite.eventMode = 'static';
-    modalSprite.cursor = 'pointer';
-    modalSprite.on('pointerdown', () => closeModal());
+    overlay.on("pointerdown", () => closeModal());
+    modalSprite.eventMode = "static";
+    modalSprite.cursor = "pointer";
+    modalSprite.on("pointerdown", () => closeModal());
 
     function closeModal() {
       // Animer la disparition du fond
-      gsap.to(overlay, { alpha: 0, duration: 0.4, ease: 'power2.in' });
+      gsap.to(overlay, { alpha: 0, duration: 0.4, ease: "power2.in" });
 
       // Animer le retour vers la position d'origine (effet FLIP inversé)
       if (sourceSprite) {
@@ -296,14 +297,14 @@ window.Webflow.push(() => {
           x: globalPos.x,
           y: globalPos.y,
           duration: 0.5,
-          ease: 'power3.in',
+          ease: "power3.in",
         });
 
         gsap.to(modalSprite.scale, {
           x: sourceSprite.scale.x,
           y: sourceSprite.scale.y,
           duration: 0.5,
-          ease: 'power3.in',
+          ease: "power3.in",
           onComplete: () => {
             // Réafficher le sprite original
             gsap.set(sourceSprite, { alpha: 1 });
@@ -315,14 +316,14 @@ window.Webflow.push(() => {
         gsap.to(modalSprite, {
           alpha: 0,
           duration: 0.3,
-          ease: 'power2.in',
+          ease: "power2.in",
         });
 
         gsap.to(modalSprite.scale, {
           x: 0.5,
           y: 0.5,
           duration: 0.3,
-          ease: 'power2.in',
+          ease: "power2.in",
           onComplete: () => {
             modalLayer.removeChildren();
           },
@@ -347,7 +348,7 @@ window.Webflow.push(() => {
     const tileArea = tileW * tileH;
     const minItemsNeeded = Math.max(
       originalCount,
-      Math.ceil(tileArea / (targetDensity * targetDensity))
+      Math.ceil(tileArea / (targetDensity * targetDensity)),
     );
 
     // Répéter les éléments CMS pour atteindre le nombre cible
@@ -376,27 +377,27 @@ window.Webflow.push(() => {
       const sp = new Sprite(tex);
       sp.anchor.set(0.5);
       // Activer les interactions pour rendre les sprites cliquables
-      sp.eventMode = 'static';
-      sp.cursor = 'pointer';
+      sp.eventMode = "static";
+      sp.cursor = "pointer";
 
       // Variables pour détecter un clic vs un drag
       let pressTime = 0;
       let hasMoved = false;
 
-      sp.on('pointerdown', (event) => {
+      sp.on("pointerdown", (event) => {
         event.stopPropagation();
         pressTime = Date.now();
         hasMoved = false;
       });
 
-      sp.on('pointermove', () => {
+      sp.on("pointermove", () => {
         // Si on bouge pendant le press, c'est un drag
         if (pressTime > 0) {
           hasMoved = true;
         }
       });
 
-      sp.on('pointerup', (event) => {
+      sp.on("pointerup", (event) => {
         event.stopPropagation();
         const clickDuration = Date.now() - pressTime;
 
@@ -428,9 +429,10 @@ window.Webflow.push(() => {
 
       // Facteur de parallax (distribué de min → max)
       const factor = clamp(
-        data.factor ?? remap(i, 0, count - 1, CONFIG.PARALLAX_MIN, CONFIG.PARALLAX_MAX),
+        data.factor ??
+          remap(i, 0, count - 1, CONFIG.PARALLAX_MIN, CONFIG.PARALLAX_MAX),
         CONFIG.PARALLAX_MIN,
-        CONFIG.PARALLAX_MAX
+        CONFIG.PARALLAX_MAX,
       );
 
       // Taille (optionnelle) : tu peux également scaler le sprite
@@ -495,14 +497,14 @@ window.Webflow.push(() => {
   ========================================= */
   function createTracker() {
     // Créer un élément invisible en dehors du viewport pour tracker les valeurs
-    const tracker = document.createElement('div');
+    const tracker = document.createElement("div");
     Object.assign(tracker.style, {
-      position: 'fixed',
-      top: '-9999px',
-      left: '-9999px',
-      width: '1px',
-      height: '1px',
-      pointerEvents: 'none',
+      position: "fixed",
+      top: "-9999px",
+      left: "-9999px",
+      width: "1px",
+      height: "1px",
+      pointerEvents: "none",
     });
     document.body.appendChild(tracker);
     return tracker;
@@ -510,12 +512,12 @@ window.Webflow.push(() => {
 
   function initDraggable(canvas, tracker, { onDelta, onPress, onRelease }) {
     // Configurer le style du canvas pour le drag
-    canvas.style.cursor = 'grab';
-    canvas.style.touchAction = 'none';
+    canvas.style.cursor = "grab";
+    canvas.style.touchAction = "none";
 
     let last = { x: 0, y: 0 };
     const d = Draggable.create(tracker, {
-      type: 'x,y',
+      type: "x,y",
       trigger: canvas, // Le canvas déclenche le drag
       // target: tracker implicitement (l'élément qu'on drag)
       inertia: !CONFIG.REDUCED_MOTION,
@@ -526,7 +528,7 @@ window.Webflow.push(() => {
         // Au début de chaque press, on reset
         last.x = 0;
         last.y = 0;
-        canvas.style.cursor = 'grabbing';
+        canvas.style.cursor = "grabbing";
         // Appeler le callback onPress externe
         onPress?.();
       },
@@ -551,7 +553,7 @@ window.Webflow.push(() => {
         last.y = 0;
       },
       onRelease() {
-        canvas.style.cursor = 'grab';
+        canvas.style.cursor = "grab";
         onRelease?.();
         // Si pas d'inertie, on réinitialise immédiatement
         if (CONFIG.REDUCED_MOTION || !this.tween) {
@@ -563,20 +565,22 @@ window.Webflow.push(() => {
     })[0];
 
     // Utilitaire pratique
-    Object.defineProperty(d, 'isDragging', { get: () => d.isPressed || d.isThrowing });
+    Object.defineProperty(d, "isDragging", {
+      get: () => d.isPressed || d.isThrowing,
+    });
     return d;
   }
 
   /* =========================================
    9) Petits helpers numériques
   ========================================= */
-  function safeParseJSON(str) {
-    try {
-      return JSON.parse(str);
-    } catch {
-      return null;
-    }
-  }
+  // function safeParseJSON(str) { // Commenté car non utilisé actuellement
+  //   try {
+  //     return JSON.parse(str);
+  //   } catch {
+  //     return null;
+  //   }
+  // }
   function clamp(v, a, b) {
     return Math.max(a, Math.min(b, v));
   }

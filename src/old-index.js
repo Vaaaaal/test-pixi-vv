@@ -1,5 +1,5 @@
-import _ from 'lodash';
-import { Application, Assets, Container, Sprite, Texture } from 'pixi.js';
+// import _ from 'lodash'; // Commenté car non utilisé
+import { Application, Assets, Container, Sprite, Texture } from "pixi.js";
 
 window.Webflow ||= [];
 window.Webflow.push(() => {
@@ -25,8 +25,8 @@ window.Webflow.push(() => {
 
   // TODO: Utiliser Pixi JS pour gérer les images en arrière-plan (voir explication ChatGPT)
   (async () => {
-    const root = document.querySelector('.infinite_page_wrap');
-    const elements = gsap.utils.toArray('.infinite_page_image');
+    const root = document.querySelector(".infinite_page_wrap");
+    const elements = gsap.utils.toArray(".infinite_page_image");
 
     if (elements.length > 0) {
       // Create a new application
@@ -61,7 +61,7 @@ window.Webflow.push(() => {
         tileW = viewportW * 2;
         tileH = viewportH * 2;
       }
-      window.addEventListener('resize', onResize);
+      window.addEventListener("resize", onResize);
 
       // charger toutes les textures
       // const assets = [];
@@ -82,7 +82,7 @@ window.Webflow.push(() => {
         const tex = Texture.from(data.src);
         const sp = new Sprite(tex);
         sp.anchor.set(0.5); // centrage visuel
-        sp.eventMode = 'none'; // (mettra "static" si interactions)
+        sp.eventMode = "none"; // (mettra "static" si interactions)
         world.addChild(sp);
 
         // Position logique initiale : ici une petite grille régulière (exemple)
@@ -115,12 +115,12 @@ window.Webflow.push(() => {
       let isDown = false;
       let last = null;
 
-      root.addEventListener('pointerdown', (e) => {
+      root.addEventListener("pointerdown", (e) => {
         isDown = true;
         last = { x: e.clientX, y: e.clientY };
       });
 
-      window.addEventListener('pointermove', (e) => {
+      window.addEventListener("pointermove", (e) => {
         if (!isDown) return;
         const dx = e.clientX - last.x;
         const dy = e.clientY - last.y;
@@ -135,10 +135,10 @@ window.Webflow.push(() => {
         vel.y = -dy;
       });
 
-      window.addEventListener('pointerup', () => {
+      window.addEventListener("pointerup", () => {
         isDown = false;
       });
-      window.addEventListener('pointerleave', () => {
+      window.addEventListener("pointerleave", () => {
         isDown = false;
       });
 
@@ -211,10 +211,14 @@ window.Webflow.push(() => {
           if (needTop) it.clones.push(placeClone(it, pos.x, pos.y + tileH));
           if (needBottom) it.clones.push(placeClone(it, pos.x, pos.y - tileH));
           // diagonales si proches des deux
-          if (needLeft && needTop) it.clones.push(placeClone(it, pos.x + tileW, pos.y + tileH));
-          if (needLeft && needBottom) it.clones.push(placeClone(it, pos.x + tileW, pos.y - tileH));
-          if (needRight && needTop) it.clones.push(placeClone(it, pos.x - tileW, pos.y + tileH));
-          if (needRight && needBottom) it.clones.push(placeClone(it, pos.x - tileW, pos.y - tileH));
+          if (needLeft && needTop)
+            it.clones.push(placeClone(it, pos.x + tileW, pos.y + tileH));
+          if (needLeft && needBottom)
+            it.clones.push(placeClone(it, pos.x + tileW, pos.y - tileH));
+          if (needRight && needTop)
+            it.clones.push(placeClone(it, pos.x - tileW, pos.y + tileH));
+          if (needRight && needBottom)
+            it.clones.push(placeClone(it, pos.x - tileW, pos.y - tileH));
 
           // petit « feel » parallax (tilt/scale selon vitesse)
           const speed = Math.hypot(vel.x, vel.y);
@@ -234,18 +238,18 @@ window.Webflow.push(() => {
       }
 
       // 1. Création du proxy invisible
-      const proxy = document.createElement('div');
+      const proxy = document.createElement("div");
       Object.assign(proxy.style, {
-        position: 'absolute',
+        position: "absolute",
         inset: 0,
-        cursor: 'grab',
+        cursor: "grab",
         opacity: 0,
       });
       root.appendChild(proxy);
 
       // 2. Draggable
       Draggable.create(proxy, {
-        type: 'x,y',
+        type: "x,y",
         inertia: true,
         onPressInit() {
           gsap.set(proxy, { x: 0, y: 0 });
