@@ -124,9 +124,6 @@ window.Webflow.push(() => {
     // 3.5 Créer le tracker invisible (en dehors) + Draggable sur le canvas
     const tracker = createTracker();
 
-    // Variable pour tracker si on est en train de drag (vs simple clic)
-    let isDragging = false;
-    let dragStartTime = 0;
     let filterTimeout = null;
 
     const drag = initDraggable(app.canvas, tracker, {
@@ -142,14 +139,10 @@ window.Webflow.push(() => {
         state.vel.y = -dy;
 
         // Marquer qu'on est en train de drag
-        isDragging = true;
       },
       onPress() {
         // Ne rien faire si l'intro n'est pas terminée
         if (!introComplete) return;
-        // Mémoriser le temps du press
-        // dragStartTime = Date.now(); // Commenté car non utilisé actuellement
-        isDragging = false;
         // Activer le filtre après un court délai (150ms) pour éviter les clics rapides sur les images
         filterTimeout = setTimeout(() => {
           gsap.to(bulgePinchFilter, {
@@ -171,7 +164,6 @@ window.Webflow.push(() => {
           duration: 0.4,
           ease: 'cubic.out',
         });
-        isDragging = false;
       },
     });
 
