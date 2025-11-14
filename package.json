@@ -49,6 +49,7 @@
     "prettier": "^3.4.2"
   },
   "dependencies": {
+    "@pixi/gif": "^3.0.1",
     "lodash": "^4.17.21",
     "pixi-filters": "^6.1.4",
     "pixi.js": "^8.14.0"
