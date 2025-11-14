@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.0
+
+### Minor Changes
+
+- 2e092bb: Add GIF and resources link button
+
 ## 0.0.1
 
 ### Patch Changes
