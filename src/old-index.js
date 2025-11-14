@@ -1,4 +1,4 @@
-import _ from 'lodash';
+// import _ from 'lodash'; // Commenté car non utilisé
 import { Application, Assets, Container, Sprite, Texture } from 'pixi.js';
 
 window.Webflow ||= [];

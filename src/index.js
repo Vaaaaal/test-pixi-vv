@@ -148,7 +148,7 @@ window.Webflow.push(() => {
         // Ne rien faire si l'intro n'est pas terminée
         if (!introComplete) return;
         // Mémoriser le temps du press
-        dragStartTime = Date.now();
+        // dragStartTime = Date.now(); // Commenté car non utilisé actuellement
         isDragging = false;
         // Activer le filtre après un court délai (150ms) pour éviter les clics rapides sur les images
         filterTimeout = setTimeout(() => {
