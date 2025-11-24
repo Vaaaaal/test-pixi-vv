@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.1
+
+### Patch Changes
+
+- a0c48e2: update animations, add services js and fix modal animations
+
 ## 0.1.0
 
 ### Minor Changes
