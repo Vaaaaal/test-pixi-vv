@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.2
+
+### Patch Changes
+
+- 2378911: update btn to small
+
 ## 0.1.1
 
 ### Patch Changes
