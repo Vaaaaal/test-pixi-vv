@@ -111,7 +111,7 @@ window.Webflow.push(() => {
 
     // 3.3 Charger textures & construire les "items" (sprites + positions logiques)
     const buttonImageUrl =
-      'https://cdn.prod.website-files.com/68f63039024ee46f705d5004/6916fbba326a4123b4082cea_btn-ressource.svg';
+      'https://cdn.prod.website-files.com/691466b780f470e29bf0640d/69258f96bbcebfd0e62646dc_btn-ressource.svg';
     await Assets.load([...itemsData.map((i) => i.src), buttonImageUrl]);
     const items = buildItems(itemsData, world, tileW, tileH, modalLayer, app);
 
