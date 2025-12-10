@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.4
+
+### Patch Changes
+
+- 69c8aab: update index to make patch action
+
 ## 0.1.3
 
 ### Patch Changes
