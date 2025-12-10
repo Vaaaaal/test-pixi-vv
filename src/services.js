@@ -1,9 +1,9 @@
 /* =========================================
    0) Imports & Plugin setup
 ========================================= */
-import { Application, Assets, Container, Sprite, Texture } from 'pixi.js';
+import { Application, Assets, Container, Sprite, Texture, TextureStyle } from 'pixi.js';
 import { GifSprite } from 'pixi.js/gif';
-import { BulgePinchFilter, DropShadowFilter } from 'pixi-filters';
+import { BulgePinchFilter } from 'pixi-filters';
 
 window.Webflow ||= [];
 window.Webflow.push(() => {
@@ -28,17 +28,6 @@ window.Webflow.push(() => {
     return { maxWidth: 400, maxHeight: 400 }; // Taille desktop
   };
 
-  // Calculer la densité cible selon la taille d'écran
-  const getTargetDensity = () => {
-    if (isMobile()) {
-      return 700; // Moins dense sur mobile (moins d'éléments)
-    }
-    if (isTablet()) {
-      return 600; // Densité intermédiaire
-    }
-    return 500; // Plus dense sur desktop
-  };
-
   // Calculer le rayon responsive du filtre bulge
   const getBulgeRadius = (viewportW, viewportH) => {
     const maxDimension = Math.max(viewportW, viewportH);
@@ -49,17 +38,6 @@ window.Webflow.push(() => {
       return maxDimension * 0.8; // Rayon intermédiaire tablette (80%)
     }
     return maxDimension * 1; // Rayon plus grand desktop (100%)
-  };
-
-  // Calculer la taille max responsive du bouton de lien
-  const getLinkButtonMaxWidth = () => {
-    if (isMobile()) {
-      return 140; // Plus petit sur mobile
-    }
-    if (isTablet()) {
-      return 150; // Taille intermédiaire tablette
-    }
-    return 166; // Taille desktop
   };
 
   // Calculer le pourcentage de taille de l'image dans la modal
@@ -81,8 +59,8 @@ window.Webflow.push(() => {
     TILE_SCALE: 2, // 2× le viewport (passe à 2.5 ou 3 si beaucoup d'items)
     FRICTION: 0.92, // inertie (proche de 1 = plus longue)
     NEAR_BORDER: 60, // seuil en px pour gestion des clones (optionnel)
-    PARALLAX_MIN: 0.4, // facteur de parallax mini (arrière-plan) - plus bas = plus d'effet
-    PARALLAX_MAX: 1.5, // facteur maxi (avant-plan) - plus haut = plus d'effet
+    PARALLAX_MIN: 0.3, // facteur de parallax mini (arrière-plan) - plus bas = plus d'effet
+    PARALLAX_MAX: 1.6, // facteur maxi (avant-plan) - plus haut = plus d'effet
     REDUCED_MOTION: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   };
 
@@ -99,6 +77,10 @@ window.Webflow.push(() => {
     // Flag pour savoir si l'animation d'intro est terminée
     let introComplete = false;
 
+    // Test nearest instead of linear
+    // TODO: remettre en linear si besoin après tests (vérifier avec Thomas)
+    TextureStyle.defaultOptions.scaleMode = 'nearest';
+
     // 3.1 Créer l'app Pixi (canvas) et la "scène monde"
     const { app, world, bulgePinchFilter, size } = await initPixi(root);
 
@@ -110,9 +92,7 @@ window.Webflow.push(() => {
     let { tileW, tileH } = computeTile(size, CONFIG.TILE_SCALE);
 
     // 3.3 Charger textures & construire les "items" (sprites + positions logiques)
-    const buttonImageUrl =
-      'https://cdn.prod.website-files.com/691466b780f470e29bf0640d/69258f96bbcebfd0e62646dc_btn-ressource.svg';
-    await Assets.load([...itemsData.map((i) => i.src), buttonImageUrl]);
+    await Assets.load(itemsData.map((i) => i.src));
     const items = buildItems(itemsData, world, tileW, tileH, modalLayer, app);
 
     // 3.4 État "caméra" (offset) + vitesse (servira à l’inertie)
@@ -237,11 +217,11 @@ window.Webflow.push(() => {
     await app.init({
       backgroundAlpha: 1,
       background: '#fff',
+      width: viewportW,
+      height: viewportH,
       antialias: true,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
-      width: viewportW,
-      height: viewportH,
       // Ne pas utiliser resizeTo pour éviter que le canvas prenne la hauteur du conteneur
     });
     rootEl.appendChild(app.canvas);
@@ -382,7 +362,8 @@ window.Webflow.push(() => {
           duration: disperseDuration,
           ease: 'power3.inOut',
         },
-        i * (CONFIG.REDUCED_MOTION ? 0.02 : 0.1)
+        // i * (CONFIG.REDUCED_MOTION ? 0.02 : 0.1)
+        i * 0
       );
 
       // Animer le scale en parallèle pour revenir à la taille normale
@@ -394,7 +375,8 @@ window.Webflow.push(() => {
           duration: disperseDuration,
           ease: 'power3.inOut',
         },
-        i * (CONFIG.REDUCED_MOTION ? 0.02 : 0.1)
+        // i * (CONFIG.REDUCED_MOTION ? 0.02 : 0.1)
+        i * 0
       );
     });
 
@@ -485,61 +467,75 @@ window.Webflow.push(() => {
     modalLayer.addChild(modalSprite);
     modalSprite.zIndex = 1;
 
-    // Créer l'élément cliquable si un lien ressource existe
-    let linkButton = null;
+    // Gérer le bouton de lien existant dans le DOM
+    const linkButtonEl = document.querySelector('.infinite_link_btn');
     const ressourceLink = data.getAttribute('ressource-link');
-    if (ressourceLink) {
-      // Récupérer la texture préalablement chargée
-      const buttonTexture = Assets.get(
-        'https://cdn.prod.website-files.com/68f63039024ee46f705d5004/6916fbba326a4123b4082cea_btn-ressource.svg'
-      );
-      // Améliorer la qualité de rendu du bouton
-      if (buttonTexture?.source) {
-        buttonTexture.source.scaleMode = 'linear';
-      }
-      linkButton = new Sprite(buttonTexture);
-      linkButton.anchor.set(1, 0); // Ancrer en haut à droite
-      linkButton.eventMode = 'static';
-      linkButton.cursor = 'pointer';
-      linkButton.alpha = 0;
-      linkButton.zIndex = 10;
-
-      // Ajouter une ombre portée (box shadow)
-      const dropShadow = new DropShadowFilter({
-        offset: { x: 0, y: 1 },
-        blur: 15,
-        alpha: 0.15,
-        color: 0x000000,
-        quality: 5,
-        resolution: window.devicePixelRatio || 1,
-      });
-      linkButton.filters = [dropShadow];
-
-      // Limiter la largeur selon la taille d'écran
-      const maxWidth = getLinkButtonMaxWidth();
-      if (linkButton.width > maxWidth) {
-        const scale = maxWidth / linkButton.width;
-        linkButton.scale.set(scale);
-      }
-
-      // Positionner au-dessus de l'image en haut à droite
-      const updateLinkButtonPosition = () => {
-        const imageRight = modalSprite.x + modalSprite.width / 2;
-        const imageTop = modalSprite.y - modalSprite.height / 2;
-        linkButton.x = imageRight;
-        linkButton.y = imageTop - linkButton.height - 10; // Au-dessus de l'image
-      };
-
-      // Positionner initialement
-      updateLinkButtonPosition();
-
-      // Ouvrir le lien dans une nouvelle page
-      linkButton.on('click', (event) => {
+    let detachDomButton = null;
+    let updateDomButtonPosition = null;
+    if (linkButtonEl && ressourceLink) {
+      const originalDisplay = linkButtonEl.dataset.prevDisplay ?? linkButtonEl.style.display ?? '';
+      const clickHandler = (event) => {
+        event.preventDefault();
         event.stopPropagation();
         window.open(ressourceLink, '_blank');
+      };
+
+      const spacing = 10;
+      updateDomButtonPosition = () => {
+        if (!linkButtonEl) return;
+        const canvasRect = app.canvas.getBoundingClientRect();
+        const spriteBounds = modalSprite.getBounds();
+        const buttonWidth = linkButtonEl.offsetWidth;
+        const buttonHeight = linkButtonEl.offsetHeight;
+        const right = canvasRect.left + spriteBounds.x + spriteBounds.width;
+        const topEdge = canvasRect.top + spriteBounds.y;
+        const leftPos = right - buttonWidth;
+        const topPos = topEdge - buttonHeight - spacing;
+        Object.assign(linkButtonEl.style, {
+          position: 'fixed',
+          left: `${leftPos}px`,
+          top: `${Math.max(topPos, 0)}px`,
+          zIndex: '999',
+        });
+      };
+
+      const handleResize = () => updateDomButtonPosition?.();
+
+      linkButtonEl.addEventListener('click', clickHandler);
+      linkButtonEl.setAttribute('href', ressourceLink);
+      linkButtonEl.setAttribute('target', '_blank');
+      linkButtonEl.setAttribute('rel', 'noopener');
+      window.addEventListener('resize', handleResize);
+
+      gsap.killTweensOf(linkButtonEl);
+      gsap.set(linkButtonEl, { autoAlpha: 0 });
+      linkButtonEl.style.display = originalDisplay || 'block';
+      updateDomButtonPosition();
+      gsap.to(linkButtonEl, {
+        autoAlpha: 1,
+        duration: 0.4,
+        delay: 0.3,
+        ease: 'power2.out',
       });
 
-      modalLayer.addChild(linkButton);
+      detachDomButton = () => {
+        gsap.killTweensOf(linkButtonEl);
+        gsap.to(linkButtonEl, {
+          autoAlpha: 0,
+          duration: 0.3,
+          ease: 'power2.in',
+          onComplete: () => {
+            linkButtonEl.style.display = 'none';
+          },
+        });
+        linkButtonEl.removeEventListener('click', clickHandler);
+        window.removeEventListener('resize', handleResize);
+        linkButtonEl.dataset.prevDisplay = originalDisplay;
+      };
+    } else if (linkButtonEl) {
+      gsap.killTweensOf(linkButtonEl);
+      linkButtonEl.style.display = 'none';
+      gsap.set(linkButtonEl, { autoAlpha: 0 });
     }
 
     // Activer le tri par zIndex
@@ -559,15 +555,7 @@ window.Webflow.push(() => {
       y: targetY,
       duration: 0.6,
       ease: 'power3.out',
-      onUpdate: () => {
-        // Mettre à jour la position du bouton pendant l'animation
-        if (linkButton) {
-          const imageRight = modalSprite.x + modalSprite.width / 2;
-          const imageTop = modalSprite.y - modalSprite.height / 2;
-          linkButton.x = imageRight;
-          linkButton.y = imageTop - linkButton.height - 10; // Au-dessus de l'image
-        }
-      },
+      onUpdate: () => updateDomButtonPosition?.(),
     });
 
     gsap.to(modalSprite.scale, {
@@ -575,15 +563,7 @@ window.Webflow.push(() => {
       y: targetScale,
       duration: 0.6,
       ease: 'power3.out',
-      onUpdate: () => {
-        // Mettre à jour la position du bouton pendant le scale
-        if (linkButton) {
-          const imageRight = modalSprite.x + modalSprite.width / 2;
-          const imageTop = modalSprite.y - modalSprite.height / 2;
-          linkButton.x = imageRight;
-          linkButton.y = imageTop - linkButton.height - 10; // Au-dessus de l'image
-        }
-      },
+      onUpdate: () => updateDomButtonPosition?.(),
     });
 
     // Animer l'opacité seulement si on part du fallback
@@ -595,16 +575,6 @@ window.Webflow.push(() => {
       });
     }
 
-    // Animer l'apparition du bouton de lien
-    if (linkButton) {
-      gsap.to(linkButton, {
-        alpha: 1,
-        duration: 0.4,
-        delay: 0.3,
-        ease: 'power2.out',
-      });
-    }
-
     // Fermer la modal au clic sur le fond
     overlay.on('pointerdown', () => closeImageModal());
     modalSprite.eventMode = 'static';
@@ -612,9 +582,10 @@ window.Webflow.push(() => {
     modalSprite.on('pointerdown', () => closeImageModal());
 
     function closeImageModal() {
-      // Animer la disparition du bouton de lien
-      if (linkButton) {
-        gsap.to(linkButton, { alpha: 0, duration: 0.3, ease: 'power2.in' });
+      // Masquer le bouton DOM si nécessaire
+      if (detachDomButton) {
+        detachDomButton();
+        detachDomButton = null;
       }
 
       // Animer la disparition du fond
@@ -671,41 +642,21 @@ window.Webflow.push(() => {
       - ici: grille avec répétition pour remplir l'espace
   ========================================= */
   function buildItems(itemsData, world, tileW, tileH, modalLayer, app) {
-    const originalCount = itemsData.length || 1;
+    const count = Math.max(1, itemsData.length);
 
-    // Calculer combien d'éléments on veut pour bien remplir (densité cible)
-    // On vise environ 1 élément tous les 500px² (ajustez selon vos besoins)
-    // Petits espacements → forte densité d'éléments (300-400)
-    // Grands espacements → faible densité d'éléments (600-800)
-    const targetDensity = getTargetDensity(); // Adapté selon la taille d'écran
-    const tileArea = tileW * tileH;
-    const minItemsNeeded = Math.max(
-      originalCount,
-      Math.ceil(tileArea / (targetDensity * targetDensity))
-    );
-
-    // Répéter les éléments CMS pour atteindre le nombre cible
-    const repeatedData = [];
-    for (let i = 0; i < minItemsNeeded; i++) {
-      repeatedData.push(itemsData[i % originalCount]);
-    }
-
-    const count = repeatedData.length;
-
-    // Calculer cols et rows en fonction du ratio de la tuile
-    // pour une meilleure distribution verticale
+    // Découper la tuile en un nombre de cellules ≥ au nombre d'items (pas de duplication)
     const tileRatio = tileW / tileH;
-    const cols = Math.ceil(Math.sqrt(count * tileRatio));
-    const rows = Math.ceil(count / cols);
+    const cols = Math.max(1, Math.ceil(Math.sqrt(count * tileRatio)));
+    const rows = Math.max(1, Math.ceil(count / cols));
 
     // Taille des cellules (zones de base pour chaque élément)
     const cellW = tileW / cols;
     const cellH = tileH / rows;
 
-    // Facteur de randomisation (0.5 = 50% de la cellule peut être randomisé)
+    // Facteur de randomisation (0.6 = 60% de la cellule peut être randomisé)
     const randomFactor = 0.6;
 
-    return repeatedData.map((data, i) => {
+    return itemsData.map((data, i) => {
       const tex = Texture.from(data.src);
       // Améliorer la qualité de rendu de la texture
       if (tex?.source) {
