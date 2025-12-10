@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.3
+
+### Patch Changes
+
+- 1462ddf: update image position in intro, remove duplicate elements, update intro animation and change texture type
+
 ## 0.1.2
 
 ### Patch Changes
