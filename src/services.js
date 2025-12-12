@@ -55,13 +55,22 @@ window.Webflow.push(() => {
    2) Configuration "tunable" de l'effet
   ========================================= */
   const CONFIG = {
-    // tuile (espace logique) = multiple du viewport
-    TILE_SCALE: 2, // 2× le viewport (passe à 2.5 ou 3 si beaucoup d'items)
     FRICTION: 0.92, // inertie (proche de 1 = plus longue)
     NEAR_BORDER: 60, // seuil en px pour gestion des clones (optionnel)
     PARALLAX_MIN: 0.3, // facteur de parallax mini (arrière-plan) - plus bas = plus d'effet
     PARALLAX_MAX: 1.6, // facteur maxi (avant-plan) - plus haut = plus d'effet
     REDUCED_MOTION: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  };
+
+  // Responsive tile scale: keep enough whitespace on tiny screens
+  const getTileScale = () => {
+    if (isMobile()) {
+      return 3.2; // agrandir la tuile pour éviter l'effet "mur" sur mobile
+    }
+    if (isTablet()) {
+      return 2.6;
+    }
+    return 2; // desktop conserve le ratio initial
   };
 
   /* =========================================
@@ -89,7 +98,8 @@ window.Webflow.push(() => {
     app.stage.addChild(modalLayer);
 
     // 3.2 Définir la tuile logique (taille "infinie" qui boucle)
-    let { tileW, tileH } = computeTile(size, CONFIG.TILE_SCALE);
+    let tileScale = getTileScale();
+    let { tileW, tileH } = computeTile(size, tileScale);
 
     // 3.3 Charger textures & construire les "items" (sprites + positions logiques)
     await Assets.load(itemsData.map((i) => i.src));
@@ -181,7 +191,8 @@ window.Webflow.push(() => {
       resizeTimeout = setTimeout(() => {
         const newSize = { w: window.innerWidth, h: window.innerHeight };
         app.renderer.resize(newSize.w, newSize.h);
-        const t = computeTile(newSize, CONFIG.TILE_SCALE);
+        tileScale = getTileScale();
+        const t = computeTile(newSize, tileScale);
         tileW = t.tileW;
         tileH = t.tileH;
         // Recentrer le world lors du resize
