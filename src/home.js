@@ -6,6 +6,7 @@ window.Webflow.push(() => {
 
   // Flag pour savoir si l'animation d'intro est terminée
   let introFlashComplete = false;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let introComplete = false;
   const loaderContent = document.querySelector('.loader_content_wrap');
 
@@ -15,7 +16,7 @@ window.Webflow.push(() => {
   });
 
   // Événement tactile pour mobile
-  loaderContent.addEventListener('touchstart', (e) => {
+  loaderContent.addEventListener('touchstart', () => {
     playOutroAnimation();
   });
 
