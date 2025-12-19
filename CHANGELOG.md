@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.6
+
+### Patch Changes
+
+- 4fc8863: add intro animation
+
 ## 0.1.5
 
 ### Patch Changes
