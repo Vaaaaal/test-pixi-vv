@@ -1,5 +1,17 @@
 # @finsweet/developer-starter
 
+## 0.1.5
+
+### Patch Changes
+
+- be664e2: Update getTileScale for mobile
+
+## 0.1.4
+
+### Patch Changes
+
+- 69c8aab: update index to make patch action
+
 ## 0.1.3
 
 ### Patch Changes
