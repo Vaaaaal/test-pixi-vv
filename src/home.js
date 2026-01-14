@@ -1,9 +1,5 @@
-console.log('Index Script Loaded');
-
 window.Webflow ||= [];
 window.Webflow.push(() => {
-  console.log('Webflow is ready');
-
   // Flag pour savoir si l'animation d'intro est terminée
   let introFlashComplete = false;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

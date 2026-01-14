@@ -20,7 +20,7 @@ window.Webflow.push(() => {
   // Calculer les tailles max responsives pour les images
   const getResponsiveImageSize = () => {
     if (isMobile()) {
-      return { maxWidth: 250, maxHeight: 250 }; // Plus petit sur mobile
+      return { maxWidth: 200, maxHeight: 200 }; // Plus petit sur mobile
     }
     if (isTablet()) {
       return { maxWidth: 300, maxHeight: 300 }; // Taille intermédiaire tablette
@@ -65,10 +65,10 @@ window.Webflow.push(() => {
   // Responsive tile scale: keep enough whitespace on tiny screens
   const getTileScale = () => {
     if (isMobile()) {
-      return 3.2; // agrandir la tuile pour éviter l'effet "mur" sur mobile
+      return 3.5; // agrandir la tuile pour éviter l'effet "mur" sur mobile
     }
     if (isTablet()) {
-      return 2.6;
+      return 2.7;
     }
     return 2; // desktop conserve le ratio initial
   };
@@ -158,7 +158,7 @@ window.Webflow.push(() => {
     });
 
     // 3.6 Lancer l'animation d'intro
-    await playIntroAnimation(items, app, () => {
+    await playIntroAnimation(items, app, tileW, tileH, () => {
       introComplete = true;
     });
 
@@ -268,7 +268,7 @@ window.Webflow.push(() => {
   /* =========================================
    5) Animation d'intro type Davide Baratta
   ========================================= */
-  async function playIntroAnimation(items, app, onComplete) {
+  async function playIntroAnimation(items, app, tileW, tileH, onComplete) {
     const viewportW = app.screen.width;
     const viewportH = app.screen.height;
     // Tenir compte du décalage du world pour centrer sur la page
@@ -361,8 +361,10 @@ window.Webflow.push(() => {
 
     items.forEach((item, i) => {
       const sp = item.sprite;
-      const targetX = item.logicalX;
-      const targetY = item.logicalY;
+      // Calculer la position finale avec les randomOffsets (comme dans updateItemsPositions)
+      // state.offset est à 0,0 au début donc on peut simplifier
+      const targetX = wrap(item.logicalX + item.randomOffsetX, tileW);
+      const targetY = wrap(item.logicalY + item.randomOffsetY, tileH);
 
       // Animer vers la position finale + retour à l'échelle normale
       disperseTimeline.to(
@@ -741,6 +743,11 @@ window.Webflow.push(() => {
         CONFIG.PARALLAX_MAX
       );
 
+      // Offset aléatoire permanent pour désynchroniser les cycles de wrap
+      // Cela empêche l'alignement périodique des images même avec des facteurs rationnels
+      const randomOffsetX = Math.random() * tileW;
+      const randomOffsetY = Math.random() * tileH;
+
       // Taille (optionnelle) : gérer largeur et/ou hauteur via attributes
       // Récupérer les attributs max-width et max-height
       const maxWidthAttr = data.getAttribute('ressource-max-width');
@@ -783,6 +790,8 @@ window.Webflow.push(() => {
         logicalY,
         factor,
         baseScale, // Sauvegarder l'échelle de base
+        randomOffsetX,
+        randomOffsetY,
       };
     });
   }
@@ -801,8 +810,8 @@ window.Webflow.push(() => {
       const ox = state.offset.x * it.factor;
       const oy = state.offset.y * it.factor;
 
-      const x = wrap(it.logicalX - ox, tileW);
-      const y = wrap(it.logicalY - oy, tileH);
+      const x = wrap(it.logicalX - ox + it.randomOffsetX, tileW);
+      const y = wrap(it.logicalY - oy + it.randomOffsetY, tileH);
 
       it.sprite.x = x;
       it.sprite.y = y;
