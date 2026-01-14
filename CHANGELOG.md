@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.7
+
+### Patch Changes
+
+- e741fe6: multiple updates
+
 ## 0.1.6
 
 ### Patch Changes
