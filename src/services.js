@@ -87,7 +87,6 @@ window.Webflow.push(() => {
     let introComplete = false;
 
     // Test nearest instead of linear
-    // TODO: remettre en linear si besoin après tests (vérifier avec Thomas)
     TextureStyle.defaultOptions.scaleMode = 'nearest';
 
     // 3.1 Créer l'app Pixi (canvas) et la "scène monde"
@@ -418,7 +417,7 @@ window.Webflow.push(() => {
   /* =========================================
    7) Modal d'aperçu d'image avec effet FLIP
   ========================================= */
-  function openImageModal(data, modalLayer, app, sourceSprite) {
+  function openImageModal(data, modalLayer, app, sourceSprite, originalWidth, originalHeight) {
     // Nettoyer la modal existante si elle existe
     modalLayer.removeChildren();
 
@@ -454,12 +453,13 @@ window.Webflow.push(() => {
     const targetY = viewportH / 2;
 
     // Calculer l'échelle finale pour que l'image prenne un pourcentage responsive du viewport
+    // MAIS ne dépasse jamais les dimensions originales de l'image pour éviter le flou
     const modalSizePercent = getModalImageSize();
-    const maxW = viewportW * modalSizePercent;
-    const maxH = viewportH * modalSizePercent;
+    const maxW = Math.min(viewportW * modalSizePercent, originalWidth || tex.width);
+    const maxH = Math.min(viewportH * modalSizePercent, originalHeight || tex.height);
     const scaleX = maxW / tex.width;
     const scaleY = maxH / tex.height;
-    const targetScale = Math.min(scaleX, scaleY, 1);
+    const targetScale = Math.min(scaleX, scaleY, 1); // Le "1" garantit qu'on n'agrandit jamais au-delà de 100%
 
     // FLIP: Commencer à la position et échelle du sprite source
     if (sourceSprite) {
@@ -675,6 +675,11 @@ window.Webflow.push(() => {
       if (tex?.source) {
         tex.source.scaleMode = 'linear';
       }
+
+      // Stocker les dimensions originales de l'image pour limiter la modal
+      const originalWidth = tex.width;
+      const originalHeight = tex.height;
+
       // Utiliser GifSprite si c'est un GIF
       const isGif = data.src.toLowerCase().endsWith('.gif');
       const sp = isGif
@@ -713,7 +718,7 @@ window.Webflow.push(() => {
 
         // Ouvrir la modal seulement si la distance est inférieure au seuil et la durée courte
         if (distance < dragThreshold && clickDuration < 200) {
-          openImageModal(data, modalLayer, app, sp); // Passer le sprite comme source pour l'effet FLIP
+          openImageModal(data, modalLayer, app, sp, originalWidth, originalHeight); // Passer le sprite et dimensions originales
         }
 
         pressTime = 0;
@@ -792,6 +797,8 @@ window.Webflow.push(() => {
         baseScale, // Sauvegarder l'échelle de base
         randomOffsetX,
         randomOffsetY,
+        originalWidth, // Dimensions originales pour limiter la modal
+        originalHeight, // Dimensions originales pour limiter la modal
       };
     });
   }
