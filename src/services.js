@@ -493,17 +493,17 @@ window.Webflow.push(() => {
         window.open(ressourceLink, '_blank');
       };
 
-      const spacing = 10;
+      const spacing = 12;
       updateDomButtonPosition = () => {
         if (!linkButtonEl) return;
         const canvasRect = app.canvas.getBoundingClientRect();
         const spriteBounds = modalSprite.getBounds();
         const buttonWidth = linkButtonEl.offsetWidth;
-        const buttonHeight = linkButtonEl.offsetHeight;
+        // const buttonHeight = linkButtonEl.offsetHeight;
         const right = canvasRect.left + spriteBounds.x + spriteBounds.width;
         const topEdge = canvasRect.top + spriteBounds.y;
-        const leftPos = right - buttonWidth;
-        const topPos = topEdge - buttonHeight - spacing;
+        const leftPos = right - buttonWidth - spacing;
+        const topPos = topEdge + spacing;
         Object.assign(linkButtonEl.style, {
           position: 'fixed',
           left: `${leftPos}px`,
