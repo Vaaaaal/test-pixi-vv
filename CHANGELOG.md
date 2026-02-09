@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.8
+
+### Patch Changes
+
+- d24be72: change btn position on image modal
+
 ## 0.1.7
 
 ### Patch Changes
