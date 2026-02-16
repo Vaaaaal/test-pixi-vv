@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.10
+
+### Patch Changes
+
+- ced4afb: Add link for page transitionning
+
 ## 0.1.9
 
 ### Patch Changes
