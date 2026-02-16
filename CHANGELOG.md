@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.9
+
+### Patch Changes
+
+- 50b6016: add navigation top / bottom for desktop (>1024) and update image modal opening
+
 ## 0.1.8
 
 ### Patch Changes
