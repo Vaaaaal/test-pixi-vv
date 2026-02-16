@@ -76,7 +76,57 @@ window.Webflow.push(() => {
   /* =========================================
    2.5) Gestion du scroll vertical pour révéler le contenu
   ========================================= */
+  // Variable pour stocker l'instance du scroll reveal (cleanup lors du resize)
+  let scrollRevealInstance = null;
+
+  // Fonction pour nettoyer le scroll reveal
+  function cleanupVerticalScrollReveal() {
+    if (!scrollRevealInstance) return;
+
+    const { observer, section, timers, progressBarTop, progressBarBottom } = scrollRevealInstance;
+
+    // 1. Détruire l'Observer GSAP
+    if (observer) {
+      observer.kill();
+    }
+
+    // 2. Nettoyer tous les timers
+    if (timers.inactivityTimer) {
+      clearTimeout(timers.inactivityTimer);
+    }
+    if (timers.unlockScrollTimer) {
+      clearTimeout(timers.unlockScrollTimer);
+    }
+
+    // 3. Tuer toutes les animations GSAP sur la section
+    if (section) {
+      gsap.killTweensOf(section);
+      // Réinitialiser la position
+      gsap.set(section, { y: '0vh', clearProps: 'all' });
+      section.style.boxShadow = 'none';
+      section.style.pointerEvents = 'auto';
+    }
+
+    // 4. Réinitialiser les progress bars
+    if (progressBarTop) {
+      progressBarTop.style.width = '0%';
+    }
+    if (progressBarBottom) {
+      progressBarBottom.style.width = '0%';
+    }
+
+    // 5. Réactiver le scroll natif
+    document.body.style.overflowY = '';
+    document.documentElement.style.overflowY = '';
+
+    // 6. Réinitialiser l'instance
+    scrollRevealInstance = null;
+  }
+
   function initVerticalScrollReveal() {
+    // Nettoyer toute instance existante avant d'en créer une nouvelle
+    cleanupVerticalScrollReveal();
+
     // Fonctionnalité uniquement sur desktop
     if (isMobile() || isTablet()) {
       return;
@@ -189,12 +239,20 @@ window.Webflow.push(() => {
     document.body.style.overflowY = 'hidden';
     document.documentElement.style.overflowY = 'hidden';
 
+    // Objet pour stocker les timers (pour cleanup)
+    const timers = {
+      inactivityTimer: null,
+      unlockScrollTimer: null,
+    };
+
     // Timer d'inactivité pour retour automatique au centre
     let inactivityTimer = null;
     // Flag pour bloquer le scroll pendant l'animation de snap
     let isSnapping = false;
     // Timer pour débloquer le scroll après un moment de calme
     let unlockScrollTimer = null;
+    // Flag pour bloquer le scroll pendant la transition de page
+    let isTransitioning = false;
 
     // Fonction pour animer vers le centre
     const snapToCenter = () => {
@@ -205,6 +263,10 @@ window.Webflow.push(() => {
       if (unlockScrollTimer) {
         clearTimeout(unlockScrollTimer);
         unlockScrollTimer = null;
+      }
+      if (timers.unlockScrollTimer) {
+        clearTimeout(timers.unlockScrollTimer);
+        timers.unlockScrollTimer = null;
       }
 
       // Animer currentY vers 0
@@ -232,6 +294,7 @@ window.Webflow.push(() => {
           unlockScrollTimer = setTimeout(() => {
             isSnapping = false;
           }, 500); // 500ms après la fin de l'animation
+          timers.unlockScrollTimer = unlockScrollTimer;
         },
       });
 
@@ -248,22 +311,127 @@ window.Webflow.push(() => {
       if (inactivityTimer) {
         clearTimeout(inactivityTimer);
       }
+      if (timers.inactivityTimer) {
+        clearTimeout(timers.inactivityTimer);
+        timers.inactivityTimer = null;
+      }
 
       // Ne démarrer le timer que si on n'est pas au centre
       if (Math.abs(currentY) > 0.1) {
         inactivityTimer = setTimeout(() => {
           snapToCenter();
         }, 5000); // 5 secondes
+        timers.inactivityTimer = inactivityTimer;
       }
     };
 
+    // Fonction pour déclencher la transition de page
+    const triggerPageTransition = (direction) => {
+      // direction: 'up' ou 'down'
+      isTransitioning = true;
+
+      // Déterminer quelle navigation est concernée
+      const targetNav = direction === 'up' ? navBottom : navTop;
+      const otherNav = direction === 'up' ? navTop : navBottom;
+
+      // Récupérer l'URL de destination depuis le lien <a> dans la navigation
+      const targetUrl = targetNav?.href;
+      if (!targetUrl) {
+        console.warn('Aucune URL de destination trouvée sur la navigation');
+        isTransitioning = false;
+        return;
+      }
+
+      // Timeline de l'animation
+      const tl = gsap.timeline({
+        onComplete: () => {
+          window.location.href = targetUrl;
+        },
+      });
+
+      // 1. Section part à ±100vh dans la direction du scroll
+      const targetY = direction === 'up' ? '-100vh' : '100vh';
+      tl.to(
+        section,
+        {
+          y: targetY,
+          duration: 1.2,
+          ease: 'power3.inOut',
+        },
+        0
+      );
+
+      // 2. Navigation non concernée disparaît dans la même direction
+      if (otherNav) {
+        tl.to(
+          otherNav,
+          {
+            y: targetY,
+            opacity: 0,
+            duration: 1,
+            ease: 'power3.inOut',
+          },
+          0
+        );
+      }
+
+      // 3. Navigation concernée se centre à l'écran
+      if (targetNav) {
+        // Déterminer les propriétés à animer selon la navigation
+        const navAnimProps =
+          targetNav === navBottom
+            ? {
+                // Pour navBottom : réinitialiser bottom et utiliser top pour centrer
+                bottom: 'auto',
+                top: '50%',
+                y: '-50%',
+                duration: 1.2,
+                ease: 'power3.inOut',
+              }
+            : {
+                // Pour navTop : utiliser top directement
+                top: '50vh',
+                y: '-50%',
+                duration: 1.2,
+                ease: 'power3.inOut',
+              };
+
+        tl.to(targetNav, navAnimProps, 0);
+
+        // 4. Progress bar disparaît
+        const progressBar = targetNav.querySelector('.infinite_progress_bar');
+        if (progressBar) {
+          tl.to(
+            progressBar,
+            {
+              opacity: 0,
+              duration: 0.6,
+              ease: 'power2.out',
+            },
+            0
+          );
+        }
+      }
+
+      // 5. Fade out global
+      tl.to(
+        document.body,
+        {
+          opacity: 0,
+          duration: 0.6,
+          ease: 'power2.inOut',
+        },
+        1.2
+      ); // Commence après que la section soit partie
+    };
+
     // Créer l'Observer GSAP pour détecter le scroll
-    Observer.create({
+    const observer = Observer.create({
       type: 'wheel,touch',
       wheelSpeed: -1,
       onUp() {
-        // Bloquer le scroll si une animation de snap est en cours
-        if (isSnapping) return;
+        // Bloquer le scroll si une animation de snap ou de transition est en cours
+        if (isSnapping || isTransitioning) return;
 
         // Réinitialiser le timer d'inactivité
         resetInactivityTimer();
@@ -289,6 +457,12 @@ window.Webflow.push(() => {
         currentY -= 100 * adjustedSensitivity;
         currentY = Math.max(-maxOffset, currentY);
 
+        // Détecter si on a atteint la limite supérieure → déclencher la transition
+        if (currentY === -maxOffset) {
+          triggerPageTransition('up');
+          return;
+        }
+
         // Désactiver les pointer events (on n'est plus au centre)
         section.style.pointerEvents = 'none';
 
@@ -306,8 +480,8 @@ window.Webflow.push(() => {
         });
       },
       onDown() {
-        // Bloquer le scroll si une animation de snap est en cours
-        if (isSnapping) return;
+        // Bloquer le scroll si une animation de snap ou de transition est en cours
+        if (isSnapping || isTransitioning) return;
 
         // Réinitialiser le timer d'inactivité
         resetInactivityTimer();
@@ -333,6 +507,12 @@ window.Webflow.push(() => {
         currentY += 100 * adjustedSensitivity;
         currentY = Math.min(maxOffset, currentY);
 
+        // Détecter si on a atteint la limite inférieure → déclencher la transition
+        if (currentY === maxOffset) {
+          triggerPageTransition('down');
+          return;
+        }
+
         // Désactiver les pointer events (on n'est plus au centre)
         section.style.pointerEvents = 'none';
 
@@ -350,7 +530,55 @@ window.Webflow.push(() => {
         });
       },
     });
+
+    // Stocker l'instance pour pouvoir la nettoyer lors du resize
+    scrollRevealInstance = {
+      observer,
+      section,
+      timers,
+      navTop,
+      navBottom,
+      progressBarTop,
+      progressBarBottom,
+    };
   }
+
+  // Gestionnaire de resize pour activer/désactiver le scroll reveal selon la taille d'écran
+  let lastScreenType = null; // 'mobile', 'tablet', 'desktop'
+  function handleScrollRevealResize() {
+    let currentScreenType;
+    if (isMobile()) {
+      currentScreenType = 'mobile';
+    } else if (isTablet()) {
+      currentScreenType = 'tablet';
+    } else {
+      currentScreenType = 'desktop';
+    }
+
+    // Si le type d'écran a changé
+    if (lastScreenType !== currentScreenType) {
+      if (currentScreenType === 'desktop') {
+        // On passe en desktop → initialiser le scroll reveal
+        initVerticalScrollReveal();
+      } else {
+        // On passe en mobile/tablet → nettoyer le scroll reveal
+        cleanupVerticalScrollReveal();
+      }
+      lastScreenType = currentScreenType;
+    }
+  }
+
+  // Initialiser le type d'écran au chargement
+  if (isMobile()) {
+    lastScreenType = 'mobile';
+  } else if (isTablet()) {
+    lastScreenType = 'tablet';
+  } else {
+    lastScreenType = 'desktop';
+  }
+
+  // Écouter les changements de taille d'écran
+  window.addEventListener('resize', handleScrollRevealResize);
 
   /* =========================================
    3) Point d'entrée : lancer l'expérience
