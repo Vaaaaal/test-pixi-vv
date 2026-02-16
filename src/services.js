@@ -74,6 +74,285 @@ window.Webflow.push(() => {
   };
 
   /* =========================================
+   2.5) Gestion du scroll vertical pour révéler le contenu
+  ========================================= */
+  function initVerticalScrollReveal() {
+    // Fonctionnalité uniquement sur desktop
+    if (isMobile() || isTablet()) {
+      return;
+    }
+
+    const section = document.querySelector('.infinite_section');
+    if (!section) {
+      console.warn('Pas de .infinite_section trouvée pour le scroll vertical.');
+      return;
+    }
+
+    // Récupérer les progress bars dans les navigations
+    const navTop = document.querySelector('.infinite_navigation.is-top');
+    const navBottom = document.querySelector('.infinite_navigation.is-bottom');
+    const progressBarTop = navTop?.querySelector('.infinite_progress_bar');
+    const progressBarBottom = navBottom?.querySelector('.infinite_progress_bar');
+
+    // Position Y actuelle de la section (en pourcentage du viewport)
+    // 0 = position initiale, -50 = montée max, +50 = descente max
+    let currentY = 0;
+    const maxOffset = 50; // ±50vh
+    const baseScrollSensitivity = 0.05; // Sensibilité de base réduite
+    const resistanceCap = 0.92; // Plafonner la résistance à 92% du parcours
+
+    // Fonction pour calculer la résistance progressive
+    // Retourne un facteur entre 0 et 1 (1 = facile, 0 = très dur)
+    const getResistanceFactor = (position) => {
+      const progress = Math.abs(position) / maxOffset; // 0 à 1
+
+      // Plafonner la résistance au-delà du seuil pour permettre d'atteindre la limite
+      const cappedProgress = Math.min(progress, resistanceCap);
+
+      // Courbe linéaire : résistance plus perceptible dès le début
+      return Math.pow(1 - cappedProgress, 1.75); // Ajuster l'exposant pour plus ou moins de résistance
+    };
+
+    // Fonction pour mettre à jour la box-shadow en fonction de la position
+    const updateShadow = (position) => {
+      const progress = Math.abs(position) / maxOffset; // 0 à 1
+      const maxBlur = 60; // Blur maximum en pixels
+      const maxSpread = 0; // Spread en pixels
+      const maxOpacity = 0.3; // Opacité maximale de la shadow
+
+      // Calculer les valeurs de la shadow
+      const blur = progress * maxBlur;
+      const opacity = progress * maxOpacity;
+
+      // Direction de la shadow selon la position
+      if (position < 0) {
+        // Section monte → shadow en dessous (offsetY positif)
+        const offsetY = 10;
+        section.style.boxShadow = `0px ${offsetY}px ${blur}px ${maxSpread}px rgba(0, 0, 0, ${opacity})`;
+      } else if (position > 0) {
+        // Section descend → shadow au-dessus (offsetY négatif)
+        const offsetY = -10;
+        section.style.boxShadow = `0px ${offsetY}px ${blur}px ${maxSpread}px rgba(0, 0, 0, ${opacity})`;
+      } else {
+        // Position initiale → pas de shadow
+        section.style.boxShadow = 'none';
+      }
+    };
+
+    // Fonction pour mettre à jour les progress bars en fonction de la position
+    const updateProgressBar = (position) => {
+      // Calculer le progrès jusqu'au resistanceCap (0 à 1)
+      const absPosition = Math.abs(position);
+      const maxProgressDistance = maxOffset; // Distance maximale pour la progress (50vh)
+      const progress = Math.min(absPosition / maxProgressDistance, 1); // Clamper à 1
+      const progressPercent = progress * 100;
+
+      if (position < 0) {
+        // Section monte → montrer progression dans la nav bottom
+        if (progressBarBottom) {
+          progressBarBottom.style.width = `${progressPercent}%`;
+        }
+        // Réinitialiser la progress bar du top
+        if (progressBarTop) {
+          progressBarTop.style.width = '0%';
+        }
+      } else if (position > 0) {
+        // Section descend → montrer progression dans la nav top
+        if (progressBarTop) {
+          progressBarTop.style.width = `${progressPercent}%`;
+        }
+        // Réinitialiser la progress bar du bottom
+        if (progressBarBottom) {
+          progressBarBottom.style.width = '0%';
+        }
+      } else {
+        // Position initiale → réinitialiser les deux
+        if (progressBarTop) {
+          progressBarTop.style.width = '0%';
+        }
+        if (progressBarBottom) {
+          progressBarBottom.style.width = '0%';
+        }
+      }
+    };
+
+    // Initialiser la position
+    gsap.set(section, { y: '0vh' });
+    section.style.boxShadow = 'none';
+    section.style.pointerEvents = 'auto';
+
+    // Initialiser les progress bars à 0
+    updateProgressBar(0);
+
+    // Empêcher l'apparition de la scrollbar native du navigateur
+    // qui créerait un décalage lors du mouvement de la section
+    document.body.style.overflowY = 'hidden';
+    document.documentElement.style.overflowY = 'hidden';
+
+    // Timer d'inactivité pour retour automatique au centre
+    let inactivityTimer = null;
+    // Flag pour bloquer le scroll pendant l'animation de snap
+    let isSnapping = false;
+    // Timer pour débloquer le scroll après un moment de calme
+    let unlockScrollTimer = null;
+
+    // Fonction pour animer vers le centre
+    const snapToCenter = () => {
+      // Bloquer le scroll pendant l'animation et après
+      isSnapping = true;
+
+      // Annuler le timer de déblocage précédent s'il existe
+      if (unlockScrollTimer) {
+        clearTimeout(unlockScrollTimer);
+        unlockScrollTimer = null;
+      }
+
+      // Animer currentY vers 0
+      const currentYProxy = { value: currentY };
+      gsap.to(currentYProxy, {
+        value: 0,
+        duration: 1,
+        ease: 'power2.inOut',
+        onUpdate: function () {
+          currentY = currentYProxy.value;
+          updateProgressBar(currentY);
+          updateShadow(currentY);
+        },
+        onComplete: () => {
+          // Forcer currentY à exactement 0 et tuer toute animation résiduelle
+          currentY = 0;
+          updateProgressBar(0);
+          updateShadow(0);
+          gsap.killTweensOf(currentYProxy);
+
+          // Réactiver les pointer events quand on est au centre
+          section.style.pointerEvents = 'auto';
+
+          // Attendre un délai supplémentaire pour absorber l'inertie résiduelle
+          unlockScrollTimer = setTimeout(() => {
+            isSnapping = false;
+          }, 500); // 500ms après la fin de l'animation
+        },
+      });
+
+      gsap.to(section, {
+        y: '0vh',
+        duration: 1,
+        ease: 'power2.inOut',
+        overwrite: 'auto',
+      });
+    };
+
+    // Fonction pour réinitialiser le timer d'inactivité
+    const resetInactivityTimer = () => {
+      if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+      }
+
+      // Ne démarrer le timer que si on n'est pas au centre
+      if (Math.abs(currentY) > 0.1) {
+        inactivityTimer = setTimeout(() => {
+          snapToCenter();
+        }, 5000); // 5 secondes
+      }
+    };
+
+    // Créer l'Observer GSAP pour détecter le scroll
+    Observer.create({
+      type: 'wheel,touch',
+      wheelSpeed: -1,
+      onUp() {
+        // Bloquer le scroll si une animation de snap est en cours
+        if (isSnapping) return;
+
+        // Réinitialiser le timer d'inactivité
+        resetInactivityTimer();
+
+        // Si on est en position positive (bas) et qu'on scroll vers le haut → snap au centre
+        if (currentY > 0) {
+          snapToCenter();
+          return;
+        }
+
+        // Scroll vers le haut → section monte (y diminue)
+        // Appliquer la résistance seulement si on s'éloigne du centre (currentY < 0)
+        let adjustedSensitivity;
+        if (currentY < 0) {
+          // On s'éloigne du centre vers le négatif → appliquer résistance
+          const resistance = getResistanceFactor(currentY);
+          adjustedSensitivity = baseScrollSensitivity * resistance;
+        } else {
+          // On revient vers le centre → pas de résistance
+          adjustedSensitivity = baseScrollSensitivity;
+        }
+
+        currentY -= 100 * adjustedSensitivity;
+        currentY = Math.max(-maxOffset, currentY);
+
+        // Désactiver les pointer events (on n'est plus au centre)
+        section.style.pointerEvents = 'none';
+
+        // Mettre à jour la progress bar
+        updateProgressBar(currentY);
+
+        // Mettre à jour la shadow
+        updateShadow(currentY);
+
+        gsap.to(section, {
+          y: `${currentY}vh`,
+          duration: 0.6,
+          ease: 'power2.out',
+          overwrite: 'auto',
+        });
+      },
+      onDown() {
+        // Bloquer le scroll si une animation de snap est en cours
+        if (isSnapping) return;
+
+        // Réinitialiser le timer d'inactivité
+        resetInactivityTimer();
+
+        // Si on est en position négative (haut) et qu'on scroll vers le bas → snap au centre
+        if (currentY < 0) {
+          snapToCenter();
+          return;
+        }
+
+        // Scroll vers le bas → section descend (y augmente)
+        // Appliquer la résistance seulement si on s'éloigne du centre (currentY > 0)
+        let adjustedSensitivity;
+        if (currentY > 0) {
+          // On s'éloigne du centre vers le positif → appliquer résistance
+          const resistance = getResistanceFactor(currentY);
+          adjustedSensitivity = baseScrollSensitivity * resistance;
+        } else {
+          // On revient vers le centre → pas de résistance
+          adjustedSensitivity = baseScrollSensitivity;
+        }
+
+        currentY += 100 * adjustedSensitivity;
+        currentY = Math.min(maxOffset, currentY);
+
+        // Désactiver les pointer events (on n'est plus au centre)
+        section.style.pointerEvents = 'none';
+
+        // Mettre à jour la progress bar
+        updateProgressBar(currentY);
+
+        // Mettre à jour la shadow
+        updateShadow(currentY);
+
+        gsap.to(section, {
+          y: `${currentY}vh`,
+          duration: 0.6,
+          ease: 'power2.out',
+          overwrite: 'auto',
+        });
+      },
+    });
+  }
+
+  /* =========================================
    3) Point d'entrée : lancer l'expérience
   ========================================= */
   (async function main() {
@@ -82,6 +361,9 @@ window.Webflow.push(() => {
     if (!root) return console.warn('Pas de .infinite_page_wrap sur la page.');
 
     const itemsData = gsap.utils.toArray('.infinite_page_image');
+
+    // Initialiser le scroll vertical pour révéler le contenu caché
+    initVerticalScrollReveal();
 
     // Flag pour savoir si l'animation d'intro est terminée
     let introComplete = false;
@@ -421,6 +703,10 @@ window.Webflow.push(() => {
     // Nettoyer la modal existante si elle existe
     modalLayer.removeChildren();
 
+    // Nettoyer les images HTML modales existantes
+    const existingModalImages = document.querySelectorAll('.pixi-modal-image');
+    existingModalImages.forEach((img) => img.remove());
+
     gsap.to('.service_title_component', { opacity: 0, duration: 0.3, ease: 'power2.out' });
 
     const viewportW = app.screen.width;
@@ -436,49 +722,70 @@ window.Webflow.push(() => {
     overlay.cursor = 'default';
     modalLayer.addChild(overlay);
 
-    // Créer le sprite de l'image en grand
+    // Créer une vraie image HTML au lieu d'un sprite PixiJS pour éviter la pixelisation
+    const modalImage = document.createElement('img');
+    modalImage.src = data.src;
+    modalImage.className = 'pixi-modal-image';
+    modalImage.style.position = 'fixed';
+    modalImage.style.zIndex = '998'; // Au-dessus de tout sauf du bouton
+    modalImage.style.cursor = 'pointer';
+    modalImage.style.pointerEvents = 'auto';
+    modalImage.style.objectFit = 'contain';
+    modalImage.style.userSelect = 'none';
+    document.body.appendChild(modalImage);
+
+    // Obtenir la texture pour les dimensions
     const tex = Texture.from(data.src);
-    const isGif = data.src.toLowerCase().endsWith('.gif');
-    const modalSprite = isGif
-      ? new GifSprite({
-          source: tex,
-          autoplay: true,
-          loop: true,
-        })
-      : new Sprite(tex);
-    modalSprite.anchor.set(0.5);
 
-    // Position finale (centre)
-    const targetX = viewportW / 2;
-    const targetY = viewportH / 2;
+    // Position finale (centre du viewport)
+    const canvasRect = app.canvas.getBoundingClientRect();
+    const targetCenterX = canvasRect.left + viewportW / 2;
+    const targetCenterY = canvasRect.top + viewportH / 2;
 
-    // Calculer l'échelle finale pour que l'image prenne un pourcentage responsive du viewport
-    // MAIS ne dépasse jamais les dimensions originales de l'image pour éviter le flou
+    // Calculer les dimensions finales
     const modalSizePercent = getModalImageSize();
     const maxW = Math.min(viewportW * modalSizePercent, originalWidth || tex.width);
     const maxH = Math.min(viewportH * modalSizePercent, originalHeight || tex.height);
-    const scaleX = maxW / tex.width;
-    const scaleY = maxH / tex.height;
-    const targetScale = Math.min(scaleX, scaleY, 1); // Le "1" garantit qu'on n'agrandit jamais au-delà de 100%
+    const scaleX = maxW / (originalWidth || tex.width);
+    const scaleY = maxH / (originalHeight || tex.height);
+    const targetScale = Math.min(scaleX, scaleY, 1);
 
-    // FLIP: Commencer à la position et échelle du sprite source
+    const targetWidth = (originalWidth || tex.width) * targetScale;
+    const targetHeight = (originalHeight || tex.height) * targetScale;
+
+    // Position initiale basée sur le sprite source
+    let startX, startY, startWidth, startHeight;
+
     if (sourceSprite) {
-      // Obtenir la position globale du sprite source
+      // Obtenir la position globale du sprite source dans le canvas
       const globalPos = sourceSprite.getGlobalPosition();
-      modalSprite.x = globalPos.x;
-      modalSprite.y = globalPos.y;
-      modalSprite.scale.set(sourceSprite.scale.x);
-      modalSprite.alpha = 1;
+      const bounds = sourceSprite.getBounds();
+
+      // Convertir en coordonnées screen
+      startX = canvasRect.left + globalPos.x;
+      startY = canvasRect.top + globalPos.y;
+      startWidth = bounds.width;
+      startHeight = bounds.height;
+
+      // Positionner l'image (center anchor)
+      modalImage.style.left = `${startX - startWidth / 2}px`;
+      modalImage.style.top = `${startY - startHeight / 2}px`;
+      modalImage.style.width = `${startWidth}px`;
+      modalImage.style.height = `${startHeight}px`;
+      modalImage.style.opacity = '1';
     } else {
       // Fallback: commencer petit au centre
-      modalSprite.x = targetX;
-      modalSprite.y = targetY;
-      modalSprite.scale.set(0.5);
-      modalSprite.alpha = 0;
-    }
+      startWidth = targetWidth * 0.5;
+      startHeight = targetHeight * 0.5;
+      startX = targetCenterX;
+      startY = targetCenterY;
 
-    modalLayer.addChild(modalSprite);
-    modalSprite.zIndex = 1;
+      modalImage.style.left = `${startX - startWidth / 2}px`;
+      modalImage.style.top = `${startY - startHeight / 2}px`;
+      modalImage.style.width = `${startWidth}px`;
+      modalImage.style.height = `${startHeight}px`;
+      modalImage.style.opacity = '0';
+    }
 
     // Gérer le bouton de lien existant dans le DOM
     const linkButtonEl = document.querySelector('.infinite_link_btn');
@@ -495,13 +802,9 @@ window.Webflow.push(() => {
 
       const spacing = 12;
       updateDomButtonPosition = () => {
-        if (!linkButtonEl) return;
-        const canvasRect = app.canvas.getBoundingClientRect();
-        const spriteBounds = modalSprite.getBounds();
+        if (!linkButtonEl || !modalImage) return;
+        const { right, top: topEdge } = modalImage.getBoundingClientRect();
         const buttonWidth = linkButtonEl.offsetWidth;
-        // const buttonHeight = linkButtonEl.offsetHeight;
-        const right = canvasRect.left + spriteBounds.x + spriteBounds.width;
-        const topEdge = canvasRect.top + spriteBounds.y;
         const leftPos = right - buttonWidth - spacing;
         const topPos = topEdge + spacing;
         Object.assign(linkButtonEl.style, {
@@ -562,18 +865,15 @@ window.Webflow.push(() => {
     // Animer l'apparition du fond
     gsap.to(overlay, { alpha: 0.75, duration: 0.4, ease: 'power2.out' });
 
-    // Animer le sprite vers sa position finale (effet FLIP)
-    gsap.to(modalSprite, {
-      x: targetX,
-      y: targetY,
-      duration: 0.6,
-      ease: 'power3.out',
-      onUpdate: () => updateDomButtonPosition?.(),
-    });
+    // Animer l'image HTML vers sa position finale (effet FLIP)
+    const targetLeft = targetCenterX - targetWidth / 2;
+    const targetTop = targetCenterY - targetHeight / 2;
 
-    gsap.to(modalSprite.scale, {
-      x: targetScale,
-      y: targetScale,
+    gsap.to(modalImage, {
+      left: `${targetLeft}px`,
+      top: `${targetTop}px`,
+      width: `${targetWidth}px`,
+      height: `${targetHeight}px`,
       duration: 0.6,
       ease: 'power3.out',
       onUpdate: () => updateDomButtonPosition?.(),
@@ -581,8 +881,8 @@ window.Webflow.push(() => {
 
     // Animer l'opacité seulement si on part du fallback
     if (!sourceSprite) {
-      gsap.to(modalSprite, {
-        alpha: 1,
+      gsap.to(modalImage, {
+        opacity: 1,
         duration: 0.4,
         ease: 'power2.out',
       });
@@ -590,11 +890,14 @@ window.Webflow.push(() => {
 
     // Fermer la modal au clic sur le fond
     overlay.on('pointerdown', () => closeImageModal());
-    modalSprite.eventMode = 'static';
-    modalSprite.cursor = 'pointer';
-    modalSprite.on('pointerdown', () => closeImageModal());
+
+    // Fermer la modal au clic sur l'image
+    modalImage.addEventListener('click', closeImageModal);
 
     function closeImageModal() {
+      // Retirer l'événement click sur l'image
+      modalImage.removeEventListener('click', closeImageModal);
+
       // Masquer le bouton DOM si nécessaire
       if (detachDomButton) {
         detachDomButton();
@@ -607,41 +910,50 @@ window.Webflow.push(() => {
       // Animer le retour vers la position d'origine (effet FLIP inversé)
       if (sourceSprite) {
         const globalPos = sourceSprite.getGlobalPosition();
+        const bounds = sourceSprite.getBounds();
+        const canvasRect = app.canvas.getBoundingClientRect();
 
-        gsap.to(modalSprite, {
-          x: globalPos.x,
-          y: globalPos.y,
-          duration: 0.5,
-          ease: 'power3.in',
-        });
+        const returnX = canvasRect.left + globalPos.x;
+        const returnY = canvasRect.top + globalPos.y;
 
-        gsap.to(modalSprite.scale, {
-          x: sourceSprite.scale.x,
-          y: sourceSprite.scale.y,
+        gsap.to(modalImage, {
+          left: `${returnX - bounds.width / 2}px`,
+          top: `${returnY - bounds.height / 2}px`,
+          width: `${bounds.width}px`,
+          height: `${bounds.height}px`,
           duration: 0.5,
           ease: 'power3.in',
           onComplete: () => {
             // Réafficher le sprite original
             gsap.set(sourceSprite, { alpha: 1 });
             modalLayer.removeChildren();
+            // Supprimer l'image HTML
+            modalImage.remove();
             gsap.to('.service_title_component', { opacity: 1, duration: 0.3, ease: 'power2.out' });
           },
         });
       } else {
         // Fallback: rétrécir au centre
-        gsap.to(modalSprite, {
-          alpha: 0,
+        gsap.to(modalImage, {
+          opacity: 0,
           duration: 0.3,
           ease: 'power2.in',
         });
 
-        gsap.to(modalSprite.scale, {
-          x: 0.5,
-          y: 0.5,
+        const shrinkWidth = targetWidth * 0.5;
+        const shrinkHeight = targetHeight * 0.5;
+
+        gsap.to(modalImage, {
+          left: `${targetCenterX - shrinkWidth / 2}px`,
+          top: `${targetCenterY - shrinkHeight / 2}px`,
+          width: `${shrinkWidth}px`,
+          height: `${shrinkHeight}px`,
           duration: 0.3,
           ease: 'power2.in',
           onComplete: () => {
             modalLayer.removeChildren();
+            // Supprimer l'image HTML
+            modalImage.remove();
             gsap.to('.service_title_component', { opacity: 1, duration: 0.3, ease: 'power2.out' });
           },
         });
