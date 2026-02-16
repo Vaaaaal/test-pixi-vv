@@ -83,8 +83,7 @@ window.Webflow.push(() => {
   function cleanupVerticalScrollReveal() {
     if (!scrollRevealInstance) return;
 
-    const { observer, section, timers, navTop, navBottom, progressBarTop, progressBarBottom } =
-      scrollRevealInstance;
+    const { observer, section, timers, progressBarTop, progressBarBottom } = scrollRevealInstance;
 
     // 1. Détruire l'Observer GSAP
     if (observer) {
