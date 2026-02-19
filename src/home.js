@@ -2,14 +2,15 @@ window.Webflow ||= [];
 window.Webflow.push(() => {
   // Flag pour savoir si l'animation d'intro est terminée
   let introFlashComplete = false;
-
   let introComplete = false;
+
   const loaderContent = document.querySelector('.loader_content_wrap');
 
   // Si l'animation a déjà été jouée lors de cette session, on cache le loader immédiatement
   if (sessionStorage.getItem('introPlayed')) {
     document.querySelector('.loader_wrap').style.display = 'none';
     introFlashComplete = true;
+
     introComplete = true;
     return;
   }
