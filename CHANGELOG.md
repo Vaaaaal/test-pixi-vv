@@ -1,5 +1,13 @@
 # @finsweet/developer-starter
 
+## 0.1.11
+
+### Patch Changes
+
+- 671b32f: add commentary to remove eslint error
+- 2f64664: remove lint error vars
+- b073618: remove top bottom nav, update home loader for first time animation only and add transition page waiting
+
 ## 0.1.10
 
 ### Patch Changes
