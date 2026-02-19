@@ -2,7 +2,6 @@ window.Webflow ||= [];
 window.Webflow.push(() => {
   // Flag pour savoir si l'animation d'intro est terminée
   let introFlashComplete = false;
-  let introComplete = false;
 
   const loaderContent = document.querySelector('.loader_content_wrap');
 
@@ -10,8 +9,6 @@ window.Webflow.push(() => {
   if (sessionStorage.getItem('introPlayed')) {
     document.querySelector('.loader_wrap').style.display = 'none';
     introFlashComplete = true;
-
-    introComplete = true;
     return;
   }
 
@@ -65,7 +62,6 @@ window.Webflow.push(() => {
         duration: 0.5,
         onComplete: () => {
           document.querySelector('.loader_wrap').style.display = 'none';
-          introComplete = true;
           // Marquer l'animation comme jouée pour toute la session
           sessionStorage.setItem('introPlayed', 'true');
           console.log('Intro animation complete');
