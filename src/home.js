@@ -2,9 +2,17 @@ window.Webflow ||= [];
 window.Webflow.push(() => {
   // Flag pour savoir si l'animation d'intro est terminée
   let introFlashComplete = false;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   let introComplete = false;
   const loaderContent = document.querySelector('.loader_content_wrap');
+
+  // Si l'animation a déjà été jouée lors de cette session, on cache le loader immédiatement
+  if (sessionStorage.getItem('introPlayed')) {
+    document.querySelector('.loader_wrap').style.display = 'none';
+    introFlashComplete = true;
+    introComplete = true;
+    return;
+  }
 
   // Événements pour déclencher l'animation d'outro
   loaderContent.addEventListener('click', () => {
@@ -25,8 +33,12 @@ window.Webflow.push(() => {
     { passive: true }
   );
 
-  // Démarrer l'animation d'intro flash
-  playIntroFlashAnimation();
+  // Démarrer l'animation d'intro flash une fois la transition de page terminée
+  if (window.pageTransitionComplete) {
+    playIntroFlashAnimation();
+  } else {
+    document.addEventListener('pageTransitionComplete', playIntroFlashAnimation, { once: true });
+  }
 
   // Animation d'intro flash
   function playIntroFlashAnimation() {
@@ -53,6 +65,8 @@ window.Webflow.push(() => {
         onComplete: () => {
           document.querySelector('.loader_wrap').style.display = 'none';
           introComplete = true;
+          // Marquer l'animation comme jouée pour toute la session
+          sessionStorage.setItem('introPlayed', 'true');
           console.log('Intro animation complete');
         },
       });

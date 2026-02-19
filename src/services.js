@@ -74,513 +74,6 @@ window.Webflow.push(() => {
   };
 
   /* =========================================
-   2.5) Gestion du scroll vertical pour révéler le contenu
-  ========================================= */
-  // Variable pour stocker l'instance du scroll reveal (cleanup lors du resize)
-  let scrollRevealInstance = null;
-
-  // Fonction pour nettoyer le scroll reveal
-  function cleanupVerticalScrollReveal() {
-    if (!scrollRevealInstance) return;
-
-    const { observer, section, timers, progressBarTop, progressBarBottom } = scrollRevealInstance;
-
-    // 1. Détruire l'Observer GSAP
-    if (observer) {
-      observer.kill();
-    }
-
-    // 2. Nettoyer tous les timers
-    if (timers.inactivityTimer) {
-      clearTimeout(timers.inactivityTimer);
-    }
-    if (timers.unlockScrollTimer) {
-      clearTimeout(timers.unlockScrollTimer);
-    }
-
-    // 3. Tuer toutes les animations GSAP sur la section
-    if (section) {
-      gsap.killTweensOf(section);
-      // Réinitialiser la position
-      gsap.set(section, { y: '0vh', clearProps: 'all' });
-      section.style.boxShadow = 'none';
-      section.style.pointerEvents = 'auto';
-    }
-
-    // 4. Réinitialiser les progress bars
-    if (progressBarTop) {
-      progressBarTop.style.width = '0%';
-    }
-    if (progressBarBottom) {
-      progressBarBottom.style.width = '0%';
-    }
-
-    // 5. Réactiver le scroll natif
-    document.body.style.overflowY = '';
-    document.documentElement.style.overflowY = '';
-
-    // 6. Réinitialiser l'instance
-    scrollRevealInstance = null;
-  }
-
-  function initVerticalScrollReveal() {
-    // Nettoyer toute instance existante avant d'en créer une nouvelle
-    cleanupVerticalScrollReveal();
-
-    // Fonctionnalité uniquement sur desktop
-    if (isMobile() || isTablet()) {
-      return;
-    }
-
-    const section = document.querySelector('.infinite_section');
-    if (!section) {
-      console.warn('Pas de .infinite_section trouvée pour le scroll vertical.');
-      return;
-    }
-
-    // Récupérer les progress bars dans les navigations
-    const navTop = document.querySelector('.infinite_navigation.is-top');
-    const navBottom = document.querySelector('.infinite_navigation.is-bottom');
-    const progressBarTop = navTop?.querySelector('.infinite_progress_bar');
-    const progressBarBottom = navBottom?.querySelector('.infinite_progress_bar');
-
-    // Position Y actuelle de la section (en pourcentage du viewport)
-    // 0 = position initiale, -50 = montée max, +50 = descente max
-    let currentY = 0;
-    const maxOffset = 50; // ±50vh
-    const baseScrollSensitivity = 0.05; // Sensibilité de base réduite
-    const resistanceCap = 0.92; // Plafonner la résistance à 92% du parcours
-
-    // Fonction pour calculer la résistance progressive
-    // Retourne un facteur entre 0 et 1 (1 = facile, 0 = très dur)
-    const getResistanceFactor = (position) => {
-      const progress = Math.abs(position) / maxOffset; // 0 à 1
-
-      // Plafonner la résistance au-delà du seuil pour permettre d'atteindre la limite
-      const cappedProgress = Math.min(progress, resistanceCap);
-
-      // Courbe linéaire : résistance plus perceptible dès le début
-      return Math.pow(1 - cappedProgress, 1.75); // Ajuster l'exposant pour plus ou moins de résistance
-    };
-
-    // Fonction pour mettre à jour la box-shadow en fonction de la position
-    const updateShadow = (position) => {
-      const progress = Math.abs(position) / maxOffset; // 0 à 1
-      const maxBlur = 60; // Blur maximum en pixels
-      const maxSpread = 0; // Spread en pixels
-      const maxOpacity = 0.3; // Opacité maximale de la shadow
-
-      // Calculer les valeurs de la shadow
-      const blur = progress * maxBlur;
-      const opacity = progress * maxOpacity;
-
-      // Direction de la shadow selon la position
-      if (position < 0) {
-        // Section monte → shadow en dessous (offsetY positif)
-        const offsetY = 10;
-        section.style.boxShadow = `0px ${offsetY}px ${blur}px ${maxSpread}px rgba(0, 0, 0, ${opacity})`;
-      } else if (position > 0) {
-        // Section descend → shadow au-dessus (offsetY négatif)
-        const offsetY = -10;
-        section.style.boxShadow = `0px ${offsetY}px ${blur}px ${maxSpread}px rgba(0, 0, 0, ${opacity})`;
-      } else {
-        // Position initiale → pas de shadow
-        section.style.boxShadow = 'none';
-      }
-    };
-
-    // Fonction pour mettre à jour les progress bars en fonction de la position
-    const updateProgressBar = (position) => {
-      // Calculer le progrès jusqu'au resistanceCap (0 à 1)
-      const absPosition = Math.abs(position);
-      const maxProgressDistance = maxOffset; // Distance maximale pour la progress (50vh)
-      const progress = Math.min(absPosition / maxProgressDistance, 1); // Clamper à 1
-      const progressPercent = progress * 100;
-
-      if (position < 0) {
-        // Section monte → montrer progression dans la nav bottom
-        if (progressBarBottom) {
-          progressBarBottom.style.width = `${progressPercent}%`;
-        }
-        // Réinitialiser la progress bar du top
-        if (progressBarTop) {
-          progressBarTop.style.width = '0%';
-        }
-      } else if (position > 0) {
-        // Section descend → montrer progression dans la nav top
-        if (progressBarTop) {
-          progressBarTop.style.width = `${progressPercent}%`;
-        }
-        // Réinitialiser la progress bar du bottom
-        if (progressBarBottom) {
-          progressBarBottom.style.width = '0%';
-        }
-      } else {
-        // Position initiale → réinitialiser les deux
-        if (progressBarTop) {
-          progressBarTop.style.width = '0%';
-        }
-        if (progressBarBottom) {
-          progressBarBottom.style.width = '0%';
-        }
-      }
-    };
-
-    // Initialiser la position
-    gsap.set(section, { y: '0vh' });
-    section.style.boxShadow = 'none';
-    section.style.pointerEvents = 'auto';
-
-    // Initialiser les progress bars à 0
-    updateProgressBar(0);
-
-    // Empêcher l'apparition de la scrollbar native du navigateur
-    // qui créerait un décalage lors du mouvement de la section
-    document.body.style.overflowY = 'hidden';
-    document.documentElement.style.overflowY = 'hidden';
-
-    // Objet pour stocker les timers (pour cleanup)
-    const timers = {
-      inactivityTimer: null,
-      unlockScrollTimer: null,
-    };
-
-    // Timer d'inactivité pour retour automatique au centre
-    let inactivityTimer = null;
-    // Flag pour bloquer le scroll pendant l'animation de snap
-    let isSnapping = false;
-    // Timer pour débloquer le scroll après un moment de calme
-    let unlockScrollTimer = null;
-    // Flag pour bloquer le scroll pendant la transition de page
-    let isTransitioning = false;
-
-    // Fonction pour animer vers le centre
-    const snapToCenter = () => {
-      // Bloquer le scroll pendant l'animation et après
-      isSnapping = true;
-
-      // Annuler le timer de déblocage précédent s'il existe
-      if (unlockScrollTimer) {
-        clearTimeout(unlockScrollTimer);
-        unlockScrollTimer = null;
-      }
-      if (timers.unlockScrollTimer) {
-        clearTimeout(timers.unlockScrollTimer);
-        timers.unlockScrollTimer = null;
-      }
-
-      // Animer currentY vers 0
-      const currentYProxy = { value: currentY };
-      gsap.to(currentYProxy, {
-        value: 0,
-        duration: 1,
-        ease: 'power2.inOut',
-        onUpdate: function () {
-          currentY = currentYProxy.value;
-          updateProgressBar(currentY);
-          updateShadow(currentY);
-        },
-        onComplete: () => {
-          // Forcer currentY à exactement 0 et tuer toute animation résiduelle
-          currentY = 0;
-          updateProgressBar(0);
-          updateShadow(0);
-          gsap.killTweensOf(currentYProxy);
-
-          // Réactiver les pointer events quand on est au centre
-          section.style.pointerEvents = 'auto';
-
-          // Attendre un délai supplémentaire pour absorber l'inertie résiduelle
-          unlockScrollTimer = setTimeout(() => {
-            isSnapping = false;
-          }, 500); // 500ms après la fin de l'animation
-          timers.unlockScrollTimer = unlockScrollTimer;
-        },
-      });
-
-      gsap.to(section, {
-        y: '0vh',
-        duration: 1,
-        ease: 'power2.inOut',
-        overwrite: 'auto',
-      });
-    };
-
-    // Fonction pour réinitialiser le timer d'inactivité
-    const resetInactivityTimer = () => {
-      if (inactivityTimer) {
-        clearTimeout(inactivityTimer);
-      }
-      if (timers.inactivityTimer) {
-        clearTimeout(timers.inactivityTimer);
-        timers.inactivityTimer = null;
-      }
-
-      // Ne démarrer le timer que si on n'est pas au centre
-      if (Math.abs(currentY) > 0.1) {
-        inactivityTimer = setTimeout(() => {
-          snapToCenter();
-        }, 5000); // 5 secondes
-        timers.inactivityTimer = inactivityTimer;
-      }
-    };
-
-    // Fonction pour déclencher la transition de page
-    const triggerPageTransition = (direction) => {
-      // direction: 'up' ou 'down'
-      isTransitioning = true;
-
-      // Déterminer quelle navigation est concernée
-      const targetNav = direction === 'up' ? navBottom : navTop;
-      const otherNav = direction === 'up' ? navTop : navBottom;
-
-      // Récupérer l'URL de destination depuis le lien <a> dans la navigation
-      const targetUrl = targetNav?.href;
-      if (!targetUrl) {
-        console.warn('Aucune URL de destination trouvée sur la navigation');
-        isTransitioning = false;
-        return;
-      }
-
-      // Timeline de l'animation
-      const tl = gsap.timeline({
-        onComplete: () => {
-          window.location.href = targetUrl;
-        },
-      });
-
-      // 1. Section part à ±100vh dans la direction du scroll
-      const targetY = direction === 'up' ? '-100vh' : '100vh';
-      tl.to(
-        section,
-        {
-          y: targetY,
-          duration: 1.2,
-          ease: 'power3.inOut',
-        },
-        0
-      );
-
-      // 2. Navigation non concernée disparaît dans la même direction
-      if (otherNav) {
-        tl.to(
-          otherNav,
-          {
-            y: targetY,
-            opacity: 0,
-            duration: 1,
-            ease: 'power3.inOut',
-          },
-          0
-        );
-      }
-
-      // 3. Navigation concernée se centre à l'écran
-      if (targetNav) {
-        // Déterminer les propriétés à animer selon la navigation
-        const navAnimProps =
-          targetNav === navBottom
-            ? {
-                // Pour navBottom : réinitialiser bottom et utiliser top pour centrer
-                bottom: 'auto',
-                top: '50%',
-                y: '-50%',
-                duration: 1.2,
-                ease: 'power3.inOut',
-              }
-            : {
-                // Pour navTop : utiliser top directement
-                top: '50vh',
-                y: '-50%',
-                duration: 1.2,
-                ease: 'power3.inOut',
-              };
-
-        tl.to(targetNav, navAnimProps, 0);
-
-        // 4. Progress bar disparaît
-        const progressBar = targetNav.querySelector('.infinite_progress_bar');
-        if (progressBar) {
-          tl.to(
-            progressBar,
-            {
-              opacity: 0,
-              duration: 0.6,
-              ease: 'power2.out',
-            },
-            0
-          );
-        }
-      }
-
-      // 5. Fade out global
-      tl.to(
-        document.body,
-        {
-          opacity: 0,
-          duration: 0.6,
-          ease: 'power2.inOut',
-        },
-        1.2
-      ); // Commence après que la section soit partie
-    };
-
-    // Créer l'Observer GSAP pour détecter le scroll
-    const observer = Observer.create({
-      type: 'wheel,touch',
-      wheelSpeed: -1,
-      onUp() {
-        // Bloquer le scroll si une animation de snap ou de transition est en cours
-        if (isSnapping || isTransitioning) return;
-
-        // Réinitialiser le timer d'inactivité
-        resetInactivityTimer();
-
-        // Si on est en position positive (bas) et qu'on scroll vers le haut → snap au centre
-        if (currentY > 0) {
-          snapToCenter();
-          return;
-        }
-
-        // Scroll vers le haut → section monte (y diminue)
-        // Appliquer la résistance seulement si on s'éloigne du centre (currentY < 0)
-        let adjustedSensitivity;
-        if (currentY < 0) {
-          // On s'éloigne du centre vers le négatif → appliquer résistance
-          const resistance = getResistanceFactor(currentY);
-          adjustedSensitivity = baseScrollSensitivity * resistance;
-        } else {
-          // On revient vers le centre → pas de résistance
-          adjustedSensitivity = baseScrollSensitivity;
-        }
-
-        currentY -= 100 * adjustedSensitivity;
-        currentY = Math.max(-maxOffset, currentY);
-
-        // Détecter si on a atteint la limite supérieure → déclencher la transition
-        if (currentY === -maxOffset) {
-          triggerPageTransition('up');
-          return;
-        }
-
-        // Désactiver les pointer events (on n'est plus au centre)
-        section.style.pointerEvents = 'none';
-
-        // Mettre à jour la progress bar
-        updateProgressBar(currentY);
-
-        // Mettre à jour la shadow
-        updateShadow(currentY);
-
-        gsap.to(section, {
-          y: `${currentY}vh`,
-          duration: 0.6,
-          ease: 'power2.out',
-          overwrite: 'auto',
-        });
-      },
-      onDown() {
-        // Bloquer le scroll si une animation de snap ou de transition est en cours
-        if (isSnapping || isTransitioning) return;
-
-        // Réinitialiser le timer d'inactivité
-        resetInactivityTimer();
-
-        // Si on est en position négative (haut) et qu'on scroll vers le bas → snap au centre
-        if (currentY < 0) {
-          snapToCenter();
-          return;
-        }
-
-        // Scroll vers le bas → section descend (y augmente)
-        // Appliquer la résistance seulement si on s'éloigne du centre (currentY > 0)
-        let adjustedSensitivity;
-        if (currentY > 0) {
-          // On s'éloigne du centre vers le positif → appliquer résistance
-          const resistance = getResistanceFactor(currentY);
-          adjustedSensitivity = baseScrollSensitivity * resistance;
-        } else {
-          // On revient vers le centre → pas de résistance
-          adjustedSensitivity = baseScrollSensitivity;
-        }
-
-        currentY += 100 * adjustedSensitivity;
-        currentY = Math.min(maxOffset, currentY);
-
-        // Détecter si on a atteint la limite inférieure → déclencher la transition
-        if (currentY === maxOffset) {
-          triggerPageTransition('down');
-          return;
-        }
-
-        // Désactiver les pointer events (on n'est plus au centre)
-        section.style.pointerEvents = 'none';
-
-        // Mettre à jour la progress bar
-        updateProgressBar(currentY);
-
-        // Mettre à jour la shadow
-        updateShadow(currentY);
-
-        gsap.to(section, {
-          y: `${currentY}vh`,
-          duration: 0.6,
-          ease: 'power2.out',
-          overwrite: 'auto',
-        });
-      },
-    });
-
-    // Stocker l'instance pour pouvoir la nettoyer lors du resize
-    scrollRevealInstance = {
-      observer,
-      section,
-      timers,
-      navTop,
-      navBottom,
-      progressBarTop,
-      progressBarBottom,
-    };
-  }
-
-  // Gestionnaire de resize pour activer/désactiver le scroll reveal selon la taille d'écran
-  let lastScreenType = null; // 'mobile', 'tablet', 'desktop'
-  function handleScrollRevealResize() {
-    let currentScreenType;
-    if (isMobile()) {
-      currentScreenType = 'mobile';
-    } else if (isTablet()) {
-      currentScreenType = 'tablet';
-    } else {
-      currentScreenType = 'desktop';
-    }
-
-    // Si le type d'écran a changé
-    if (lastScreenType !== currentScreenType) {
-      if (currentScreenType === 'desktop') {
-        // On passe en desktop → initialiser le scroll reveal
-        initVerticalScrollReveal();
-      } else {
-        // On passe en mobile/tablet → nettoyer le scroll reveal
-        cleanupVerticalScrollReveal();
-      }
-      lastScreenType = currentScreenType;
-    }
-  }
-
-  // Initialiser le type d'écran au chargement
-  if (isMobile()) {
-    lastScreenType = 'mobile';
-  } else if (isTablet()) {
-    lastScreenType = 'tablet';
-  } else {
-    lastScreenType = 'desktop';
-  }
-
-  // Écouter les changements de taille d'écran
-  window.addEventListener('resize', handleScrollRevealResize);
-
-  /* =========================================
    3) Point d'entrée : lancer l'expérience
   ========================================= */
   (async function main() {
@@ -589,9 +82,6 @@ window.Webflow.push(() => {
     if (!root) return console.warn('Pas de .infinite_page_wrap sur la page.');
 
     const itemsData = gsap.utils.toArray('.infinite_page_image');
-
-    // Initialiser le scroll vertical pour révéler le contenu caché
-    initVerticalScrollReveal();
 
     // Flag pour savoir si l'animation d'intro est terminée
     let introComplete = false;
@@ -612,6 +102,14 @@ window.Webflow.push(() => {
 
     // 3.3 Charger textures & construire les "items" (sprites + positions logiques)
     await Assets.load(itemsData.map((i) => i.src));
+
+    // Pré-charger les images dans le cache <img> du navigateur (pipeline séparée de WebGL)
+    // Cela évite le flash blanc lors du premier clic sur la modal
+    itemsData.forEach((imgEl) => {
+      const preload = new Image();
+      preload.src = imgEl.src;
+    });
+
     const items = buildItems(itemsData, world, tileW, tileH, modalLayer, app);
 
     // 3.4 État "caméra" (offset) + vitesse (servira à l’inertie)
@@ -666,7 +164,8 @@ window.Webflow.push(() => {
       },
     });
 
-    // 3.6 Lancer l'animation d'intro
+    // 3.6 Attendre la fin de la transition de page, puis lancer l'animation d'intro
+    await waitForPageTransition();
     await playIntroAnimation(items, app, tileW, tileH, () => {
       introComplete = true;
     });
@@ -995,12 +494,12 @@ window.Webflow.push(() => {
       startWidth = bounds.width;
       startHeight = bounds.height;
 
-      // Positionner l'image (center anchor)
+      // Positionner l'image (center anchor) - opacity 0 jusqu'au chargement
       modalImage.style.left = `${startX - startWidth / 2}px`;
       modalImage.style.top = `${startY - startHeight / 2}px`;
       modalImage.style.width = `${startWidth}px`;
       modalImage.style.height = `${startHeight}px`;
-      modalImage.style.opacity = '1';
+      modalImage.style.opacity = '0';
     } else {
       // Fallback: commencer petit au centre
       startWidth = targetWidth * 0.5;
@@ -1085,35 +584,42 @@ window.Webflow.push(() => {
     // Activer le tri par zIndex
     modalLayer.sortableChildren = true;
 
-    // Cacher le sprite original pendant l'animation
-    if (sourceSprite) {
-      gsap.set(sourceSprite, { alpha: 0 });
-    }
-
-    // Animer l'apparition du fond
-    gsap.to(overlay, { alpha: 0.75, duration: 0.4, ease: 'power2.out' });
-
-    // Animer l'image HTML vers sa position finale (effet FLIP)
+    // Coordonnées finales de l'image
     const targetLeft = targetCenterX - targetWidth / 2;
     const targetTop = targetCenterY - targetHeight / 2;
 
-    gsap.to(modalImage, {
-      left: `${targetLeft}px`,
-      top: `${targetTop}px`,
-      width: `${targetWidth}px`,
-      height: `${targetHeight}px`,
-      duration: 0.6,
-      ease: 'power3.out',
-      onUpdate: () => updateDomButtonPosition?.(),
-    });
+    // Démarrer l'animation FLIP une fois l'image prête
+    const startAnimation = () => {
+      // Rendre l'image visible (elle est chargée)
+      modalImage.style.opacity = '1';
 
-    // Animer l'opacité seulement si on part du fallback
-    if (!sourceSprite) {
+      // Cacher le sprite original pendant l'animation
+      if (sourceSprite) {
+        gsap.set(sourceSprite, { alpha: 0 });
+      }
+
+      // Animer l'apparition du fond
+      gsap.to(overlay, { alpha: 0.75, duration: 0.4, ease: 'power2.out' });
+
+      // Animer l'image HTML vers sa position finale (effet FLIP)
       gsap.to(modalImage, {
+        left: `${targetLeft}px`,
+        top: `${targetTop}px`,
+        width: `${targetWidth}px`,
+        height: `${targetHeight}px`,
         opacity: 1,
-        duration: 0.4,
-        ease: 'power2.out',
+        duration: 0.6,
+        ease: 'power3.out',
+        onUpdate: () => updateDomButtonPosition?.(),
       });
+    };
+
+    // Déclencher immédiatement si l'image est déjà en cache, sinon attendre onload
+    if (modalImage.complete && modalImage.naturalWidth > 0) {
+      startAnimation();
+    } else {
+      modalImage.onload = startAnimation;
+      modalImage.onerror = startAnimation; // fallback si erreur de chargement
     }
 
     // Fermer la modal au clic sur le fond
@@ -1455,6 +961,18 @@ window.Webflow.push(() => {
   /* =========================================
    11) Petits helpers numériques
   ========================================= */
+
+  // Retourne une promesse qui se résout quand la transition de page d'arrivée est terminée
+  function waitForPageTransition() {
+    return new Promise((resolve) => {
+      if (window.pageTransitionComplete) {
+        resolve();
+      } else {
+        document.addEventListener('pageTransitionComplete', resolve, { once: true });
+      }
+    });
+  }
+
   function clamp(v, a, b) {
     return Math.max(a, Math.min(b, v));
   }
