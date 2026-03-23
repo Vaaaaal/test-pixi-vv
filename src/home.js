@@ -20,6 +20,16 @@ window.Webflow.push(() => {
     scrollTriggers.push(st);
   });
 
+  // Scroll vers une ancre dynamique via data-scroll-to="#slug"
+  document.querySelectorAll('[data-scroll-to]').forEach((link) => {
+    link.addEventListener('click', (e) => {
+      const target = document.querySelector('#' + link.dataset.scrollTo);
+      if (!target) return;
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
   // Sauvegarde du panel actif au click sur un lien data-link-to
   const dataLinkToLinks = document.querySelectorAll('[data-link-to]');
   dataLinkToLinks.forEach((link) => {
