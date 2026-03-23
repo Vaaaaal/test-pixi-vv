@@ -3,7 +3,7 @@ window.Webflow.push(() => {
   // --------------------------- Animation de scroll pour les panels ---------------------------
   const allPanels = document.querySelectorAll('.home_services-panel_element');
   const scrollTriggers = [];
-  allPanels.forEach((panel, i) => {
+  allPanels.forEach((panel) => {
     const st = ScrollTrigger.create({
       trigger: panel,
       start: 'top top',
