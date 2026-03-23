@@ -980,4 +980,22 @@ window.Webflow.push(() => {
     if (a1 === a2) return b1;
     return b1 + (b2 - b1) * ((v - a1) / (a2 - a1));
   }
+
+  // Retour vers la homepage avec restauration du scroll
+  const backToHomeLinks = document.querySelectorAll('[data-back-to-home]');
+  console.log(`[services] ${backToHomeLinks.length} lien(s) [data-back-to-home] trouvé(s)`);
+  backToHomeLinks.forEach((link) => {
+    link.addEventListener('click', () => {
+      console.log('[services] data-back-to-home cliqué → restoreHomePanel posé');
+      sessionStorage.setItem('restoreHomePanel', 'true');
+    });
+  });
+
+  // Tout autre lien efface la sauvegarde du panel homepage
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a');
+    if (link && !link.hasAttribute('data-back-to-home')) {
+      sessionStorage.removeItem('homePanelIndex');
+    }
+  });
 });
