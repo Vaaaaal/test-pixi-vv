@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.13
+
+### Patch Changes
+
+- cfd093a: update homepage anchor (list)
+
 ## 0.1.12
 
 ### Patch Changes
