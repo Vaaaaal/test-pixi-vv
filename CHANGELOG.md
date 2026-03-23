@@ -1,5 +1,12 @@
 # @finsweet/developer-starter
 
+## 0.1.12
+
+### Patch Changes
+
+- ed0e7c6: Update intro
+- 21208c0: Update loader with video (and options) and add panel JS script in homepage
+
 ## 0.1.11
 
 ### Patch Changes
