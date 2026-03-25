@@ -10,12 +10,14 @@ window.Webflow.push(() => {
       end: 'bottom top',
       pin: true,
       pinSpacing: false,
+      /*
       snap: {
         snapTo: 1, // Snap to the end of the panel
         duration: 0.45,
         delay: 0,
         ease: 'power1.inOut',
       },
+      */
     });
     scrollTriggers.push(st);
   });
