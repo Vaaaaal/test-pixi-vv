@@ -1,5 +1,12 @@
 # @finsweet/developer-starter
 
+## 0.1.14
+
+### Patch Changes
+
+- f78d180: Add responsive richtext image
+- 3ee4f62: Remove snap from homepage project list
+
 ## 0.1.13
 
 ### Patch Changes
