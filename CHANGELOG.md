@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.15
+
+### Patch Changes
+
+- 3a5f118: remove stacking from home list
+
 ## 0.1.14
 
 ### Patch Changes
