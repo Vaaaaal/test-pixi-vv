@@ -75,11 +75,11 @@ window.Webflow.push(() => {
   // (ajout de ?loader dans l'URL pour forcer le rejeu en dev)
   const forceLoader = new URLSearchParams(window.location.search).has('loader');
   if (forceLoader) sessionStorage.removeItem('introPlayed');
-  if (!forceLoader && sessionStorage.getItem('introPlayed')) {
-    document.querySelector('.loader_wrap').style.display = 'none';
-    introFlashComplete = true;
-    return;
-  }
+  // if (!forceLoader && sessionStorage.getItem('introPlayed')) {
+  //   document.querySelector('.loader_wrap').style.display = 'none';
+  //   introFlashComplete = true;
+  //   return;
+  // }
 
   // Bloquer le scroll pendant le loader
   document.body.style.overflow = 'hidden';
@@ -132,7 +132,7 @@ window.Webflow.push(() => {
           document.querySelector('.loader_wrap').style.display = 'none';
           // Débloquer le scroll et marquer l'animation comme jouée pour toute la session
           document.body.style.overflow = '';
-          sessionStorage.setItem('introPlayed', 'true');
+          // sessionStorage.setItem('introPlayed', 'true');
         },
       });
     }
