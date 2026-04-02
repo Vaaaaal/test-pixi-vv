@@ -53,7 +53,7 @@ export const processRichtextResponsiveImages = (root = document) => {
       }
 
       mobile.figure.remove();
-      converted++;
+      converted += 1;
     });
   });
 
