@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.17
+
+### Patch Changes
+
+- 3ffbd8e: Add condition to display loader
+
 ## 0.1.16
 
 ### Patch Changes
