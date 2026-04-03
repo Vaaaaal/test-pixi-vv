@@ -32,14 +32,16 @@ window.Webflow.push(() => {
     });
   });
 
+  const allPanels = document.querySelectorAll('.home_services-panel_element');
+
   // Sauvegarde du panel actif au click sur un lien data-link-to
   const dataLinkToLinks = document.querySelectorAll('[data-link-to]');
   dataLinkToLinks.forEach((link) => {
     link.addEventListener('click', () => {
       let activePanelIndex = 0;
       let closestDist = Infinity;
-      scrollTriggers.forEach((st, i) => {
-        const dist = Math.abs(st.start - window.scrollY);
+      allPanels.forEach((panel, i) => {
+        const dist = Math.abs(panel.getBoundingClientRect().top);
         if (dist < closestDist) {
           closestDist = dist;
           activePanelIndex = i;
@@ -57,13 +59,21 @@ window.Webflow.push(() => {
     const index = parseInt(restoreIndex, 10);
     sessionStorage.removeItem('homePanelIndex');
     requestAnimationFrame(() => {
-      const target = scrollTriggers[index];
+      const target = allPanels[index];
       if (target) {
-        window.scrollTo(0, target.start);
+        window.scrollTo(0, target.getBoundingClientRect().top + window.scrollY);
       } else {
-        console.warn(`[home] Aucun ScrollTrigger trouvé pour l'index ${index}`);
+        console.warn(`[home] Aucun panel trouvé pour l'index ${index}`);
       }
     });
+  }
+
+  // Skip loader si on revient depuis la page service via data-back-to-home
+  if (sessionStorage.getItem('skipHomeLoader')) {
+    sessionStorage.removeItem('skipHomeLoader');
+    const loaderWrap = document.querySelector('.loader_wrap');
+    if (loaderWrap) loaderWrap.style.display = 'none';
+    return;
   }
 
   // Flag pour savoir si l'animation d'intro est terminée

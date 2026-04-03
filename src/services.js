@@ -988,6 +988,7 @@ window.Webflow.push(() => {
     link.addEventListener('click', () => {
       console.log('[services] data-back-to-home cliqué → restoreHomePanel posé');
       sessionStorage.setItem('restoreHomePanel', 'true');
+      sessionStorage.setItem('skipHomeLoader', 'true');
     });
   });
 
