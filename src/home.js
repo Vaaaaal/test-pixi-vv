@@ -1,6 +1,5 @@
 window.Webflow ||= [];
 window.Webflow.push(() => {
-  /*
   // --------------------------- Animation de scroll pour les panels ---------------------------
   const allPanels = document.querySelectorAll('.home_services-panel_element');
   const scrollTriggers = [];
@@ -20,7 +19,6 @@ window.Webflow.push(() => {
     });
     scrollTriggers.push(st);
   });
-  */
 
   // Scroll vers une ancre dynamique via data-scroll-to="#slug"
   document.querySelectorAll('[data-scroll-to]').forEach((link) => {
@@ -31,8 +29,6 @@ window.Webflow.push(() => {
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
-
-  const allPanels = document.querySelectorAll('.home_services-panel_element');
 
   // Sauvegarde du panel actif au click sur un lien data-link-to
   const dataLinkToLinks = document.querySelectorAll('[data-link-to]');
