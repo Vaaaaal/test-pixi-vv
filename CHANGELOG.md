@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.19
+
+### Patch Changes
+
+- a57a8e1: add richtext insecable
+
 ## 0.1.18
 
 ### Patch Changes
