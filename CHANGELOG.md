@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.18
+
+### Patch Changes
+
+- 8aaa912: add stacking on home service panel
+
 ## 0.1.17
 
 ### Patch Changes
