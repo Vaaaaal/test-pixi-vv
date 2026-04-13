@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.21
+
+### Patch Changes
+
+- f3b027c: Add snap again
+
 ## 0.1.20
 
 ### Patch Changes
