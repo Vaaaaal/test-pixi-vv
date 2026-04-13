@@ -992,11 +992,19 @@ window.Webflow.push(() => {
     });
   });
 
+  // Skip du loader sur la homepage (utilisable indépendamment de data-back-to-home)
+  document.querySelectorAll('[data-skip-home-loader]').forEach((link) => {
+    link.addEventListener('click', () => {
+      sessionStorage.setItem('skipHomeLoader', 'true');
+    });
+  });
+
   // Tout autre lien efface la sauvegarde du panel homepage
   document.addEventListener('click', (e) => {
     const link = e.target.closest('a');
     if (link && !link.hasAttribute('data-back-to-home')) {
       sessionStorage.removeItem('homePanelIndex');
+      sessionStorage.removeItem('skipHomeLoader');
     }
   });
 });
