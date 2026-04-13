@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.20
+
+### Patch Changes
+
+- eb419e2: Add skip loader attribute
+
 ## 0.1.19
 
 ### Patch Changes
