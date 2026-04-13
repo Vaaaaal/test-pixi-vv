@@ -1,5 +1,11 @@
 # @finsweet/developer-starter
 
+## 0.1.22
+
+### Patch Changes
+
+- ab59d55: Change Js of navbar element
+
 ## 0.1.21
 
 ### Patch Changes
