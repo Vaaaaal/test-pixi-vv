@@ -11,7 +11,7 @@ window.Webflow.push(() => {
       pin: true,
       pinSpacing: false,
       snap: {
-        snapTo: 1, // Snap to the end of the panel
+        snapTo: 1,
         duration: {
           min: 0.45,
           max: 0.6,
@@ -22,6 +22,22 @@ window.Webflow.push(() => {
     });
     scrollTriggers.push(st);
   });
+
+  // Snap anticipé pour le premier panel : l'attire vers le haut
+  // dès que son top atteint 30% du viewport
+  if (allPanels.length > 0) {
+    ScrollTrigger.create({
+      trigger: allPanels[0],
+      start: 'top 35%',
+      end: 'top top',
+      snap: {
+        snapTo: 1,
+        duration: { min: 0.45, max: 0.6 },
+        delay: 0,
+        ease: 'power1.inOut',
+      },
+    });
+  }
 
   // Scroll vers une ancre dynamique via data-scroll-to="#slug"
   document.querySelectorAll('[data-scroll-to]').forEach((link) => {
